@@ -1,77 +1,103 @@
-// settings is generic
-
-// use macros to setup setters and getters
-
-// set_port()
-/*
-this.difficulty = (Difficulty)this.get("difficulty", dispatchNumberOrString(Difficulty::byId, Difficulty::byName), Difficulty::getKey, Difficulty.EASY);
-      this.gamemode = (GameType)this.get("gamemode", dispatchNumberOrString(GameType::byId, GameType::byName), GameType::getName, GameType.SURVIVAL);
-      this.levelName = this.get("level-name", "world");
-      this.levelSeed = this.get("level-seed", "");
-      this.levelType = (LevelType)this.get("level-type", LevelType::getLevelType, LevelType::getName, LevelType.NORMAL);
-      this.generatorSettings = this.get("generator-settings", "");
-      this.serverPort = this.get("server-port", 25565);
-      this.maxBuildHeight = this.get("max-build-height", (var0) -> {
-         return Mth.clamp((var0 + 8) / 16 * 16, 64, 256);
-      }, 256);
-      this.announcePlayerAchievements = this.getLegacyBoolean("announce-player-achievements");
-      this.enableQuery = this.get("enable-query", false);
-      this.queryPort = this.get("query.port", 25565);
-      this.enableRcon = this.get("enable-rcon", false);
-      this.rconPort = this.get("rcon.port", 25575);
-      this.rconPassword = this.get("rcon.password", "");
-      this.resourcePackHash = this.getLegacyString("resource-pack-hash");
-      this.resourcePackSha1 = this.get("resource-pack-sha1", "");
-      this.hardcore = this.get("hardcore", false);
-      this.allowNether = this.get("allow-nether", true);
-      this.spawnMonsters = this.get("spawn-monsters", true);
-      if (this.get("snooper-enabled", true)) {
-      }
-
-      this.snooperEnabled = false;
-      this.useNativeTransport = this.get("use-native-transport", true);
-      this.enableCommandBlock = this.get("enable-command-block", false);
-      this.spawnProtection = this.get("spawn-protection", 16);
-      this.opPermissionLevel = this.get("op-permission-level", 4);
-      this.functionPermissionLevel = this.get("function-permission-level", 2);
-      this.maxTickTime = this.get("max-tick-time", TimeUnit.MINUTES.toMillis(1L));
-      this.viewDistance = this.get("view-distance", 10);
-      this.maxPlayers = this.get("max-players", 20);
-      this.networkCompressionThreshold = this.get("network-compression-threshold", 256);
-      this.broadcastRconToOps = this.get("broadcast-rcon-to-ops", true);
-      this.broadcastConsoleToOps = this.get("broadcast-console-to-ops", true);
-      this.maxWorldSize = this.get("max-world-size", (var0) -> {
-         return Mth.clamp(var0, 1, 29999984);
-      }, 29999984);
-      this.playerIdleTimeout = this.getMutable("player-idle-timeout", 0);
-      this.whiteList = this.getMutable("white-list", false);
-*/
 use std::path::PathBuf;
-use crate::world::{Difficulty, GameMode};
+use crate::world::{Difficulty, GameMode, level::LevelType};
 use crate::util::Properties;
 
 #[derive(Debug)]
 pub struct Settings {
-    // properties: Properties,
+    allow_flight: bool,
+    allow_nether: bool,
+    broadcast_console_to_ops: bool,
+    broadcast_rcon_to_ops: bool,
     difficulty: Difficulty,
+    enable_command_block: bool,
+    enable_query: bool,
+    enable_rcon: bool,
+    enforce_whitlist: bool,
+    force_gamemode: bool,
+    function_permission_level: u32,
     game_mode: GameMode,
-
+    generate_structures: bool,
+    generator_settings: String,
+    hardcore: bool,
     level_name: String,
     level_seed: String,
+    level_type: LevelType,
+    max_build_height: i32,
+    max_players: u32,
+    max_tick_time: i32,
+    max_world_size: u32,
+    motd: String,
+    network_compression_threshold: i32,
+    online_mode: bool,
+    op_permission_level: u32,
+    player_idle_timeout: u32,
+    prevent_proxy_connections: bool,
+    pvp: bool,
+    query_port: u32,
+    rcon_password: String,
+    rcon_port: u32,
+    resource_pack: String,
+    resource_pack_sha1: String,
+    server_ip: String,
+    server_port: u32,
+    spawn_animals: bool,
+    spawn_monsters: bool,
+    spawn_npcs: bool,
+    spawn_protection: i32,
+    use_native_transport: bool,
+    view_distance: u32,
+    white_list: bool,
 }
+
 
 impl Settings {
     pub fn load(path: PathBuf) -> Settings {
         let mut properties = Properties::load(path);
 
         Settings {
+            allow_flight: properties.get_bool_default("allow-flight", false),
+            allow_nether: properties.get_bool_default("allow-nether", true),
+            broadcast_console_to_ops: properties.get_bool_default("broadcast-console-to-ops", true),
+            broadcast_rcon_to_ops: properties.get_bool_default("broadcast-rcon-to-ops", true),
             difficulty: Self::get_difficulty(&mut properties, "difficulty", Difficulty::Easy),
+            enable_command_block: properties.get_bool_default("enable-command-block", false),
+            enable_query: properties.get_bool_default("enable-query", false),
+            enable_rcon: properties.get_bool_default("enable-rcon", false),
+            enforce_whitlist: properties.get_bool_default("enforce-whitelist", false),
+            force_gamemode: properties.get_bool_default("force-gamemode", false),
+            function_permission_level: properties.get_u32_default("function-permission-level", 2),
             game_mode: Self::get_game_mode(&mut properties, "gamemode", GameMode::Survival),
-
+            generate_structures: properties.get_bool_default("generate-structures", true),
+            generator_settings: properties.get_default("generator-settings", ""),
+            hardcore: properties.get_bool_default("hardcore", false),
             level_name: properties.get_default("level-name", "world"),
             level_seed: properties.get_default("level-seed", ""),
-
-            // properties,
+            level_type: Self::get_level_type(&mut properties, "level-type", LevelType::Default),
+            max_build_height: properties.get_i32_default("max-build-height", 256),
+            max_players: properties.get_u32_default("max-players", 20),
+            max_tick_time: properties.get_i32_default("max-tick-time", 60 * 1000),
+            max_world_size: properties.get_u32_default("max-world-size", 29999984),
+            motd: properties.get_default("motd", "A Minecraft Server"),
+            network_compression_threshold: properties.get_i32_default("network-compression-threshold", 256),
+            online_mode: properties.get_bool_default("online-mode", true),
+            op_permission_level: properties.get_u32_default("op-permission-level", 4),
+            player_idle_timeout: properties.get_u32_default("player-idle-timeout", 0),
+            prevent_proxy_connections: properties.get_bool_default("prevent-proxy-connections", false),
+            pvp: properties.get_bool_default("pvp", true),
+            query_port: properties.get_u32_default("query.port", 25565),
+            rcon_password: properties.get_default("rcon.password", ""),
+            rcon_port: properties.get_u32_default("rcon.port", 25565),
+            resource_pack: properties.get_default("resource-pack", ""),
+            resource_pack_sha1: properties.get_default("resource-pack-sha1", ""),
+            server_ip: properties.get_default("server-ip", ""),
+            server_port: properties.get_u32_default("server-port", 25565),
+            spawn_animals: properties.get_bool_default("spawn-animals", true),
+            spawn_monsters: properties.get_bool_default("spawn-monsters", true),
+            spawn_npcs: properties.get_bool_default("spawn-npcs", true),
+            spawn_protection: properties.get_i32_default("spawn-protection", 16),
+            use_native_transport: properties.get_bool_default("use-native-transport", true),
+            view_distance: properties.get_u32_default("view-distance", 10),
+            white_list: properties.get_bool_default("white-list", true),
         }
     }
 
@@ -82,58 +108,41 @@ impl Settings {
     pub fn game_mode(&self) -> GameMode {
         self.game_mode
     }
-
-    fn get_difficulty(properties: &mut Properties, key: &str, default: Difficulty) -> Difficulty {
-        let value = properties.get(key);
-
-        if value.is_some() {
-            let value = value.unwrap();
-            let mut difficulty = Difficulty::from_name(&value);
-
-            // check if name failed to match
-            if difficulty.is_none() {
-                // try convert string to integer
-                if let Ok(id) = value.parse::<i32>() {
-                    // check if id matched
-                    difficulty = Difficulty::from_id(id);
-                }
-            }
-
-            // only return difficulty if found
-            if difficulty.is_some() {
-                return difficulty.unwrap();
-            }
-        }
-
-        // apply default difficulty and override existing
-        properties.set(key, default.name());
-        default
-    }
-
-    fn get_game_mode(properties: &mut Properties, key: &str, default: GameMode) -> GameMode {
-        let value = properties.get(key);
-
-        if value.is_some() {
-            let value = value.unwrap();
-            let mut game_mode = GameMode::from_name(&value);
-
-            // check if name failed to match
-            if game_mode.is_none() {
-                // try convert string to integer
-                if let Ok(id) = value.parse::<i32>() {
-                    // check if id matched
-                    game_mode = GameMode::from_id(id);
-                }
-            }
-
-            // only return game mode if found
-            if game_mode.is_some() {
-                return game_mode.unwrap();
-            }
-        }
-
-        // apply default game mode and override existing
-        properties.set(key, default.name());
-        default
-    }
 }
+
+macro_rules! add_custom_fn {
+    ($fn: ident, $type: ty) => {
+        impl Settings {
+            fn $fn(properties: &mut Properties, key: &str, default: $type) -> $type {
+                let value = properties.get(key);
+
+                if value.is_some() {
+                    let value = value.unwrap();
+                    let mut custom_value = <$type>::from_name(&value);
+
+                    // check if name failed to match
+                    if custom_value.is_none() {
+                        // try convert string to integer
+                        if let Ok(id) = value.parse::<i32>() {
+                            // check if id matched
+                            custom_value = <$type>::from_id(id);
+                        }
+                    }
+
+                    // only return if found
+                    if custom_value.is_some() {
+                        return custom_value.unwrap();
+                    }
+                }
+
+                // apply default and override existing
+                properties.set(key, default.name());
+                default
+            }
+        }
+    };
+}
+
+add_custom_fn!(get_difficulty, Difficulty);
+add_custom_fn!(get_game_mode, GameMode);
+add_custom_fn!(get_level_type, LevelType);
