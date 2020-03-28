@@ -1,14 +1,19 @@
 extern crate java_props;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod server;
 pub mod world;
 pub mod util;
+// pub mod registry;
+pub mod core;
 
 use std::env;
 use std::thread;
 use std::time::SystemTime;
 use std::sync::{Arc, Mutex};
-use server::{Server, Settings};
+use server::{Server, Settings, Ticker};
 
 fn get_server_settings() -> Settings {
     let mut path = env::current_dir().unwrap();
@@ -17,41 +22,20 @@ fn get_server_settings() -> Settings {
     server::Settings::load(path)
 }
 
-fn await_server_lock(server_ref: Arc<Mutex<Server>>) -> Option<&mut Server> {
-    server_ref
-}
+// fn await_server_lock(server_ref: Arc<Mutex<Server>>) -> Option<&mut Server> {
+//     server_ref
+// }
 
 fn init_server(settings: Settings) {
     let server = Server::new(settings);
     let server = Arc::new(Mutex::new(server));
 
     let server_ref = server.clone();
+    let server_thread = thread::spawn(
+        move || Ticker::new(&server_ref).run()
+    );
 
-    thread::spawn(move || {
-        loop {
-            {
-                let mut test = server_ref.lock().unwrap();
-                print!("t1: ");
-                test.tick();
-            }
-
-            thread::sleep_ms(1000);
-        }
-    });
-
-    let server_ref = server.clone();
-
-    thread::spawn(move || {
-        loop {
-            {
-                let mut test = server_ref.as_ref().lock().unwrap();
-                print!("t2: ");
-                test.tick();
-            }
-
-            thread::sleep_ms(1000);
-        }
-    }).join().unwrap();
+    server_thread.join().unwrap();
 }
 
 fn main() {

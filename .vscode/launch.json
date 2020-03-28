@@ -1,0 +1,42 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'mc-server'",
+			"cargo": {
+				"args": [
+					"build",
+					"--bin=mc-server",
+					"--package=mc-server"
+				],
+				"filter": {
+					"name": "mc-server",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in executable 'mc-server'",
+			"cargo": {
+				"args": [
+					"test",
+					"--no-run",
+					"--bin=mc-server",
+					"--package=mc-server"
+				],
+				"filter": {
+					"name": "mc-server",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}
