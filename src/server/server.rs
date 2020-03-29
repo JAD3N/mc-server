@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use crate::util;
 use super::Settings;
 
@@ -11,12 +12,18 @@ pub struct ServerData {
 }
 
 pub struct Server {
+    pool: ThreadPool,
     settings: Settings,
     data: Arc<Mutex<ServerData>>,
 }
 
 impl Server {
     pub fn new(settings: Settings) -> Server {
+        let pool = ThreadPoolBuilder::new()
+            .name_prefix("Server ")
+            .create()
+            .unwrap();
+
         let data = Arc::new(Mutex::new(ServerData {
             is_running: false,
             tick_count: 0,
@@ -24,7 +31,7 @@ impl Server {
             last_warning: 0,
         }));
 
-        Server { settings, data }
+        Server { pool, settings, data }
     }
 
     pub fn data(&self) -> &Arc<Mutex<ServerData>> {
@@ -61,10 +68,10 @@ impl Server {
 
             data.tick_count += 1;
 
-            println!("tick {}", data.tick_count);
+            info!("Tick: {}", data.tick_count);
         }
 
-        std::thread::sleep_ms(60000);
+        // i
     }
 
 }

@@ -32,9 +32,6 @@ impl DimensionType {
 }
 
 macro_rules! add_dimension_type {
-    ($key:ident, $id:expr, $name:expr, $suffix:expr, $folder:expr) => {
-        add_dimension_type!($key, $id, $name, $suffix, $folder, false);
-    };
     ($key:ident, $id:expr, $name:expr, $suffix:expr, $folder:expr, $has_sky_light:expr) => {
         impl DimensionType {
             pub const $key: DimensionType = DimensionType {
@@ -45,14 +42,12 @@ macro_rules! add_dimension_type {
                 has_sky_light: $has_sky_light,
             };
         }
-
-        // register!($name, DimensionType::<$key>);
     };
 }
 
 add_dimension_type!(OVERWORLD, 1, "overworld", "", "", true);
-add_dimension_type!(NETHER, 0, "the_nether", "_nether", "DIM-1");
-add_dimension_type!(END, 2, "the_end", "_end", "DIM1");
+add_dimension_type!(NETHER, 0, "the_nether", "_nether", "DIM-1", false);
+add_dimension_type!(END, 2, "the_end", "_end", "DIM1", false);
 
 pub struct Dimension {
     type_: DimensionType,
