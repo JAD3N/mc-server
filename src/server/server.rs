@@ -1,71 +1,70 @@
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use crate::util;
 use super::Settings;
+
+
+pub struct ServerData {
+    pub is_running: bool,
+    pub tick_count: u64,
+    pub next_tick: u64,
+    pub last_warning: u64,
+}
 
 pub struct Server {
     settings: Settings,
-    is_running: bool,
-    tick_count: u64,
-    next_tick: u64,
-    last_warning: u64,
+    data: Arc<Mutex<ServerData>>,
 }
-
-pub type ServerRef = Arc<Mutex<Server>>;
 
 impl Server {
     pub fn new(settings: Settings) -> Server {
-        Server {
-            settings: settings,
+        let data = Arc::new(Mutex::new(ServerData {
             is_running: false,
             tick_count: 0,
             next_tick: 0,
             last_warning: 0,
-        }
+        }));
+
+        Server { settings, data }
+    }
+
+    pub fn data(&self) -> &Arc<Mutex<ServerData>> {
+        &self.data
     }
 
     pub fn is_running(&self) -> bool {
-        self.is_running
+        self.data.lock().unwrap().is_running
+    }
+
+    pub fn tick_count(&self) -> u64 {
+        self.data.lock().unwrap().tick_count
     }
 
     pub fn settings(&self) -> &Settings {
         &self.settings
     }
 
-    pub fn settings_mut(&mut self) -> &mut Settings {
-        &mut self.settings
-    }
-
-    pub fn next_tick(&self) -> u64 {
-        self.next_tick
-    }
-
-    pub fn set_next_tick(&mut self, next_tick: u64) {
-        self.next_tick = next_tick;
-    }
-
-    pub fn last_warning(&self) -> u64 {
-        self.last_warning
-    }
-
-    pub fn set_last_warning(&mut self, last_warning: u64) {
-        self.last_warning = last_warning;
-    }
-
     pub fn init(&mut self) {
-        self.is_running = true;
-        self.next_tick = crate::util::get_millis();
+        let mut data = self.data.lock().unwrap();
+
+        data.is_running = true;
+        data.tick_count = 0;
+        data.next_tick = util::get_millis();
+        data.last_warning = 0;
     }
 
     pub fn tick(&mut self) {
-        if !self.is_running {
-            return;
+        {
+            let mut data = self.data.lock().unwrap();
+            if !data.is_running {
+                return;
+            }
+
+            data.tick_count += 1;
+
+            println!("tick {}", data.tick_count);;
         }
 
-        println!("{}", self.tick_count);
-
-        std::thread::sleep_ms(60000);
-
-        self.tick_count += 1;
+        // std::thread::sleep_ms(60000);
     }
 
 }

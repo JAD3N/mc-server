@@ -10,7 +10,7 @@ pub mod core;
 
 use std::env;
 use std::sync::{Arc, Mutex};
-use server::{Server, Settings, Ticker, Watcher};
+use server::{Server, Settings, Ticker};
 
 fn get_server_settings() -> Settings {
     let mut path = env::current_dir().unwrap();
@@ -27,10 +27,10 @@ fn main() {
     let ticker_handle = ticker.run();
 
     if let Some(ticker_handle) = ticker_handle {
-        Watcher::new(
-            5000,
-            server.clone()
-        ).watch();
+        // Watcher::new(
+        //     5000,
+        //     server.clone()
+        // ).watch();
 
         ticker_handle.join().unwrap();
     }

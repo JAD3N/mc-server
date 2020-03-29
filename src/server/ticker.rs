@@ -1,5 +1,5 @@
-use crate::util::get_millis;
-use super::ServerRef;
+use crate::util;
+use super::{Server, ServerData};
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -9,39 +9,50 @@ const WARNING_THRESHOLD: u64 = 2000;
 const WARNING_DELAY: u64 = 15000;
 
 pub struct Ticker {
-    server: ServerRef,
+    server: Arc<Mutex<Server>>,
+    server_data: Arc<Mutex<ServerData>>,
 }
 
 impl Ticker {
-    pub fn new(server: ServerRef) -> Ticker {
-        Ticker { server }
+    pub fn new(server: Arc<Mutex<Server>>) -> Ticker {
+        let server_data = server.lock()
+            .unwrap()
+            .data()
+            .clone();
+
+        Ticker { server, server_data }
     }
 
     fn tick(&mut self) -> Option<u64> {
-        let mut server = self.server.lock().unwrap();
+        let mut server_data = self.server_data.lock().unwrap();
 
-        if server.is_running() {
-            let mut next_tick = server.next_tick();
-            let last_warning = server.last_warning();
+        if server_data.is_running {
+            let now = util::get_millis();
+            let tick_delta = now - server_data.next_tick;
 
-            let now = get_millis();
-            let tick_delta = now - next_tick;
-
-            if tick_delta > WARNING_THRESHOLD && now - last_warning >= WARNING_DELAY {
+            if tick_delta > WARNING_THRESHOLD && now - server_data.last_warning >= WARNING_DELAY {
                 let ticks = tick_delta / TICK;
 
                 println!("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", tick_delta, ticks);
 
-                next_tick += TICK * ticks;
-                server.set_last_warning(next_tick);
+                server_data.next_tick += TICK * ticks;
+                server_data.last_warning = server_data.next_tick;
             }
 
-            next_tick += TICK;
+            server_data.next_tick += TICK;
 
-            server.set_next_tick(next_tick);
-            server.tick();
+            // store delay
+            let delay = server_data.next_tick - now;
 
-            Some(next_tick - now)
+            // prevent mutex lock
+            drop(server_data);
+
+            // trigger server tick
+            self.server.lock()
+                .unwrap()
+                .tick();
+
+            Some(delay)
         } else {
             None
         }
@@ -57,7 +68,7 @@ impl Ticker {
             drop(server);
 
             Some(thread::spawn(move || {
-                while self.server.lock().unwrap().is_running() {
+                while self.server_data.lock().unwrap().is_running {
                     match self.tick() {
                         Some(duration) => thread::sleep(Duration::from_millis(duration)),
                         None => continue,
