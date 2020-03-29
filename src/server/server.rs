@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use crate::util;
 use super::Settings;
 
-
+// used to store data independently from the server struct
 pub struct ServerData {
     pub is_running: bool,
     pub tick_count: u64,
