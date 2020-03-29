@@ -40,14 +40,20 @@ impl Ticker {
             }
 
             server_data.next_tick += TICK;
-            let next_tick = server_data.next_tick;
+
+            let delay = if server_data.next_tick > now {
+                Some(server_data.next_tick - now)
+            } else {
+                None
+            };
 
             drop(server_data);
+
             self.server.lock()
                 .unwrap()
                 .tick();
 
-            Some(next_tick)
+            delay
         } else {
             None
         }
@@ -67,10 +73,8 @@ impl Ticker {
 
             Some(thread_builder.spawn(move || {
                 while self.server_data.lock().unwrap().is_running {
-                    if let Some(next_tick) = self.tick() {
-                        while next_tick > util::get_millis() {
-                            util::sleep(1);
-                        }
+                    if let Some(delay) = self.tick() {
+                        util::sleep(delay);
                     }
                 }
             }).unwrap())

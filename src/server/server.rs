@@ -3,6 +3,8 @@ use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use crate::util;
 use super::Settings;
 
+const TICK_SAMPLE: f32 = 10.0;
+
 // used to store data independently from the server struct
 pub struct ServerData {
     pub is_running: bool,
@@ -15,6 +17,8 @@ pub struct Server {
     pool: ThreadPool,
     settings: Settings,
     data: Arc<Mutex<ServerData>>,
+    tick_times: [u64; 100],
+    average_tick_time: f32,
 }
 
 impl Server {
@@ -31,7 +35,13 @@ impl Server {
             last_warning: 0,
         }));
 
-        Server { pool, settings, data }
+        Server {
+            pool,
+            settings,
+            data,
+            tick_times: [0; 100],
+            average_tick_time: 0.0,
+        }
     }
 
     pub fn data(&self) -> &Arc<Mutex<ServerData>> {
@@ -60,18 +70,35 @@ impl Server {
     }
 
     pub fn tick(&mut self) {
-        {
+        let start_time = util::get_nanos();
+        let tick_count = {
             let mut data = self.data.lock().unwrap();
             if !data.is_running {
                 return;
             }
 
             data.tick_count += 1;
+            data.tick_count
+        };
 
-            info!("Tick: {}", data.tick_count);
+        // TODO: Tick command functions
+
+        // TODO: Tick connections (new connections?)
+        // TODO: Tick player list
+
+        
+
+        if tick_count % 6000 == 0 {
+            // TODO: Save player list
+            // TODO: Save all chunks
         }
 
-        // i
+        let total_time = util::get_nanos() - start_time;
+
+        self.tick_times[(tick_count % 100) as usize] = total_time;
+
+        self.average_tick_time *= (TICK_SAMPLE - 1.0) / TICK_SAMPLE;
+        self.average_tick_time += (total_time as f32) / TICK_SAMPLE;
     }
 
 }
