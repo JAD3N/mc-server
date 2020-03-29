@@ -108,6 +108,10 @@ impl Settings {
     pub fn game_mode(&self) -> GameMode {
         self.game_mode
     }
+
+    pub fn max_tick_time(&self) -> i32 {
+        self.max_tick_time
+    }
 }
 
 macro_rules! add_custom_fn {

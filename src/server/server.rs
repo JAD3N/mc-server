@@ -61,10 +61,10 @@ impl Server {
 
             data.tick_count += 1;
 
-            println!("tick {}", data.tick_count);;
+            println!("tick {}", data.tick_count);
         }
 
-        // std::thread::sleep_ms(60000);
+        std::thread::sleep_ms(60000);
     }
 
 }

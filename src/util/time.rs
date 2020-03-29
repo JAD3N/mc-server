@@ -1,11 +1,8 @@
-use std::time::{SystemTime, Duration};
+use std::time::Duration;
 use std::thread;
 
 pub fn get_millis() -> u64 {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64
+    chrono::Local::now().timestamp_millis() as u64
 }
 
 pub fn sleep(millis: u64) {

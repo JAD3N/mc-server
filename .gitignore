@@ -1,4 +1,6 @@
 /target
 **/*.rs.bk
 
+/logs
+/world
 server.properties

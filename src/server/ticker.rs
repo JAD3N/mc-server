@@ -4,9 +4,9 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-const TICK: u64 = 50;
-const WARNING_THRESHOLD: u64 = 2000;
-const WARNING_DELAY: u64 = 15000;
+pub const TICK: u64 = 50;
+pub const WARNING_THRESHOLD: u64 = 2000;
+pub const WARNING_DELAY: u64 = 15000;
 
 pub struct Ticker {
     server: Arc<Mutex<Server>>,
@@ -33,7 +33,7 @@ impl Ticker {
             if tick_delta > WARNING_THRESHOLD && now - server_data.last_warning >= WARNING_DELAY {
                 let ticks = tick_delta / TICK;
 
-                println!("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", tick_delta, ticks);
+                warn!("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", tick_delta, ticks);
 
                 server_data.next_tick += TICK * ticks;
                 server_data.last_warning = server_data.next_tick;
@@ -67,14 +67,17 @@ impl Ticker {
             server.init();
             drop(server);
 
-            Some(thread::spawn(move || {
+            let thread_builder = thread::Builder::new()
+                .name(String::from("Server thread"));
+
+            Some(thread_builder.spawn(move || {
                 while self.server_data.lock().unwrap().is_running {
                     match self.tick() {
                         Some(duration) => thread::sleep(Duration::from_millis(duration)),
                         None => continue,
                     }
                 }
-            }))
+            }).unwrap())
         }
     }
 }

@@ -1,18 +1,22 @@
-use std::thread;
 use std::process;
-use std::time::Duration;
-use crate::{util::get_millis, server::ServerRef};
+use std::sync::{Arc, Mutex};
+use crate::util;
+use super::{Server, ServerData, TICK};
 
 pub struct Watcher {
     max_tick_time: i32,
-    server: ServerRef,
+    server_data: Arc<Mutex<ServerData>>,
 }
 
 impl Watcher {
-    pub fn new(max_tick_time: i32, server: ServerRef) -> Watcher {
+    pub fn new(server: &Arc<Mutex<Server>>) -> Watcher {
+        let server_lock = server.lock().unwrap();
+        let server_data = server_lock.data().clone();
+        let max_tick_time = server_lock.settings().max_tick_time();
+
         Watcher {
             max_tick_time,
-            server: server,
+            server_data,
         }
     }
 
@@ -24,31 +28,30 @@ impl Watcher {
         let max_tick_time = self.max_tick_time as u64;
 
         loop {
-            let server = self.server.lock().unwrap();
+            let server_data = self.server_data.lock().unwrap();
 
-            if !server.is_running() {
+            // check if server is running
+            if !server_data.is_running {
                 break;
             }
 
-            let next_tick = server.next_tick();
-            let now = get_millis();
+            let now = util::get_millis();
 
-            if now > next_tick  {
-                let tick_delta = now - next_tick;
+            if now > server_data.next_tick  {
+                let tick_delta = now - server_data.next_tick;
 
                 if tick_delta > max_tick_time {
-                    eprintln!("A single server tick took {} seconds (should be max {})", tick_delta / 1000, max_tick_time / 1000);
-                    eprintln!("Considering it to be crashed, server will forcibly shutdown.");
+                    error!("A single server tick took {:.2} seconds (should be max {:.2})", tick_delta as f32 / 1000.0, TICK as f32 / 1000.0);
+                    error!("Considering it to be crashed, server will forcibly shutdown.");
 
                     process::exit(1);
                 }
             }
 
-            // prevent server mutex being locked
-            drop(server);
+            let delay = server_data.next_tick + max_tick_time - now;
 
-            // wait
-            thread::sleep(Duration::from_millis(next_tick + max_tick_time - now));
+            drop(server_data);
+            util::sleep(delay);
         }
     }
 }
