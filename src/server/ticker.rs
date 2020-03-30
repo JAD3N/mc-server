@@ -2,7 +2,6 @@ use crate::util;
 use super::{Server, ServerData};
 use std::thread;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 pub const TICK: u64 = 50;
 pub const WARNING_THRESHOLD: u64 = 2000;

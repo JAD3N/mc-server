@@ -3,7 +3,6 @@ use std::collections::HashMap;
 #[derive(Clone, Copy, PartialEq)]
 enum DimensionTrait {
     HasSkyLight,
-    Test,
 }
 
 traitable!(DimensionTrait, Dimension {
