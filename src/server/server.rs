@@ -82,11 +82,8 @@ impl Server {
         };
 
         // TODO: Tick command functions
-
         // TODO: Tick connections (new connections?)
         // TODO: Tick player list
-
-        
 
         if tick_count % 6000 == 0 {
             // TODO: Save player list
@@ -100,5 +97,4 @@ impl Server {
         self.average_tick_time *= (TICK_SAMPLE - 1.0) / TICK_SAMPLE;
         self.average_tick_time += (total_time as f32) / TICK_SAMPLE;
     }
-
 }

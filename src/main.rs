@@ -3,10 +3,11 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod server;
-pub mod world;
+#[macro_use]
 pub mod util;
 pub mod core;
+pub mod server;
+pub mod world;
 
 use std::env;
 use std::sync::{Arc, Mutex};
