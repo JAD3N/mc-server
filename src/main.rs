@@ -71,7 +71,6 @@ fn main() {
     let ticker = Ticker::new(server.clone());
     let ticker_handle = ticker.run();
 
-
     info!("{}This is a red {}This is blue", chat::Color::RED, chat::Color::BLUE);
 
     if let Some(ticker_handle) = ticker_handle {
