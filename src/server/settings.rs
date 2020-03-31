@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use crate::world::{Difficulty, GameMode, level::LevelType};
 use crate::util::Properties;
+use crate::world::{level::LevelType, Difficulty, GameMode};
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Settings {
@@ -49,7 +49,6 @@ pub struct Settings {
     white_list: bool,
 }
 
-
 impl Settings {
     pub fn load(path: PathBuf) -> Settings {
         let mut properties = Properties::load(path);
@@ -78,11 +77,13 @@ impl Settings {
             max_tick_time: properties.get_i32_default("max-tick-time", 60 * 1000),
             max_world_size: properties.get_u32_default("max-world-size", 29999984),
             motd: properties.get_default("motd", "A Minecraft Server"),
-            network_compression_threshold: properties.get_i32_default("network-compression-threshold", 256),
+            network_compression_threshold: properties
+                .get_i32_default("network-compression-threshold", 256),
             online_mode: properties.get_bool_default("online-mode", true),
             op_permission_level: properties.get_u32_default("op-permission-level", 4),
             player_idle_timeout: properties.get_u32_default("player-idle-timeout", 0),
-            prevent_proxy_connections: properties.get_bool_default("prevent-proxy-connections", false),
+            prevent_proxy_connections: properties
+                .get_bool_default("prevent-proxy-connections", false),
             pvp: properties.get_bool_default("pvp", true),
             query_port: properties.get_u32_default("query.port", 25565),
             rcon_password: properties.get_default("rcon.password", ""),

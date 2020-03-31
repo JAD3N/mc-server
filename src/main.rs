@@ -8,6 +8,7 @@ pub mod util;
 pub mod core;
 pub mod server;
 pub mod world;
+pub mod chat;
 
 use std::env;
 use std::sync::{Arc, Mutex};
@@ -69,6 +70,9 @@ fn main() {
     let server = Arc::new(Mutex::new(Server::new(settings)));
     let ticker = Ticker::new(server.clone());
     let ticker_handle = ticker.run();
+
+
+    info!("{}This is a red {}This is blue", chat::Color::RED, chat::Color::BLUE);
 
     if let Some(ticker_handle) = ticker_handle {
         Watcher::new(&server).watch();

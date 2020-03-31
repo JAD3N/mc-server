@@ -32,11 +32,9 @@ macro_rules! dimension_type {
 lazy_static! {
     static ref DIMENSIONS: HashMap<&'static str, Dimension> = {
         let mut m = HashMap::new();
-
         m.insert("overworld", dimension_type!(1, "overworld", "", "", [HasSkyLight]));
         m.insert("the_nether", dimension_type!(0, "the_nether", "_nether", "DIM-1"));
         m.insert("the_end", dimension_type!(2, "the_nether", "_end", "DIM1"));
-
         m
     };
 }
