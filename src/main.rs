@@ -11,7 +11,7 @@ pub mod world;
 pub mod chat;
 
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use server::{Server, Settings, Ticker, Watcher};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::rolling_file::RollingFileAppender;
@@ -60,8 +60,37 @@ fn get_server_settings() -> Settings {
     server::Settings::load(path)
 }
 
+struct TextComponent {
+
+}
+
+struct TranslatableComponent {
+
+}
+
+enum Component {
+    Text(TextComponent),
+    Translatable(TranslatableComponent),
+}
+
+struct ComponentContainer {
+    component: Arc<Mutex<Component>>,
+}
+
 fn main() {
     init_logger();
+
+    let c = ComponentContainer {
+        component: Arc::new(Mutex::new(Component::Text(TextComponent {
+
+        })))
+    };
+
+    let mut test = c.component.lock().unwrap();
+
+    if let Component::Text(ref component) = *test {
+        info!("Test!");
+    }
 
     info!("Starting server...");
 
