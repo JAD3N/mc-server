@@ -1,16 +1,15 @@
-// #[derive(Clone, Copy, PartialEq)]
-// pub enum HoverEventAction {
-//     OpenUrl,
-//     OpenFile,
-//     RunCommand,
-//     SuggestCommand,
-//     ChangePage,
-//     CopyToClipboard,
-// }
+#[derive(Clone, Copy, PartialEq)]
+pub enum HoverEventAction {
+    OpenUrl,
+    OpenFile,
+    RunCommand,
+    SuggestCommand,
+    ChangePage,
+    CopyToClipboard,
+}
 
-// pub trait Component {}
-
-// pub struct HoverEvent {
-//     pub action: HoverEventAction,
-//     pub value: Box<dyn Component>,
-// }
+#[derive(Clone, PartialEq)]
+pub struct HoverEvent {
+    pub action: HoverEventAction,
+    // pub value: ComponentContainer,
+}
