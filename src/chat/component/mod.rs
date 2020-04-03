@@ -10,7 +10,7 @@ pub enum Component {
     Base(TextComponent),
 }
 
-pub trait BaseComponent {
+pub trait BaseComponent: Into<Component> {
     // fn style(&self) -> Option<&Style>;
 }
 
@@ -23,9 +23,9 @@ pub struct ComponentContainer {
 }
 
 impl ComponentContainer {
-    pub fn new(component: Component) -> ComponentContainer {
+    pub fn new<C: Into<Component>>(component: C) -> ComponentContainer {
         ComponentContainer {
-            component: Arc::new(Mutex::new(component)),
+            component: Arc::new(Mutex::new(component.into())),
             children: vec![],
             parent: None,
         }
@@ -42,8 +42,8 @@ impl ComponentContainer {
 }
 
 pub fn test() {
-    let c1 = Component::Text(TextComponent { text: String::from("") });
-    let c2 = Component::Text(TextComponent { text: String::from("") });
+    let c1 = TextComponent { text: String::from("") };
+    let c2 = TextComponent { text: String::from("This is some sample text.") };
 
     let mut cc1 = ComponentContainer::new(c1);
     let cc2 = ComponentContainer::new(c2);
@@ -53,6 +53,6 @@ pub fn test() {
     let component = cc1.children.get(0).unwrap().component();
 
     if let Component::Text(ref component) = *component {
-        println!("Test!");
+        println!("Test! {}", component.text);
     }
 }
