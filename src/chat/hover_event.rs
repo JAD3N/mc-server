@@ -1,3 +1,5 @@
+use super::component::Component;
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum HoverEventAction {
     OpenUrl,
@@ -8,8 +10,8 @@ pub enum HoverEventAction {
     CopyToClipboard,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct HoverEvent {
     pub action: HoverEventAction,
-    // pub value: ComponentContainer,
+    pub value: Component,
 }

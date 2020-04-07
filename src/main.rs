@@ -8,6 +8,7 @@ pub mod util;
 pub mod core;
 pub mod server;
 pub mod world;
+#[macro_use]
 pub mod chat;
 
 use std::env;
@@ -62,8 +63,6 @@ fn get_server_settings() -> Settings {
 
 fn main() {
     init_logger();
-
-    crate::chat::component::test();
 
     info!("Starting server...");
 

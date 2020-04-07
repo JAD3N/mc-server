@@ -43,7 +43,7 @@ macro_rules! traitable {
     ($traits:ty, $name:ident { $( $field:ident: $ty:ty ),* $(,)* }) => {
         use crate::util::Traitable;
 
-        #[derive(Clone, PartialEq)]
+        #[derive(Clone)]
         pub struct $name {
             traits: Vec<$traits>,
             $( $field: $ty ),*

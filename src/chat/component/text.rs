@@ -1,15 +1,11 @@
-use super::{Component, BaseComponent};
+use super::ComponentType;
 
-pub struct TextComponent {
-    pub text: String,
-}
+component!(TextComponent {
+    text: String,
+});
 
-impl Into<Component> for TextComponent {
-    fn into(self) -> Component {
-        Component::Text(self)
+impl Into<ComponentType> for TextComponent {
+    fn into(self) -> ComponentType {
+        ComponentType::Text(self)
     }
-}
-
-impl BaseComponent for TextComponent {
-
 }

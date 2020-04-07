@@ -1,58 +1,80 @@
-mod text;
+#[macro_export]
+macro_rules! component {
+    ($name:ident { $( $field:ident: $ty:ty ),* $(,)* }) => {
+        use crate::chat::Style;
 
+        #[derive(Clone)]
+        pub struct $name {
+            style: Style,
+            $( $field: $ty ),*
+        }
+
+        impl $name {
+            pub fn style(&self) -> &Style {
+                &self.style
+            }
+
+            pub fn style_mut(&mut self) -> &mut Style {
+                &mut self.style
+            }
+        }
+    };
+}
+
+mod text;
 pub use text::*;
 
-use super::Style;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-pub enum Component {
+#[derive(Clone)]
+pub enum ComponentType {
     Text(TextComponent),
-    Base(TextComponent),
 }
 
-pub trait BaseComponent: Into<Component> {
-    // fn style(&self) -> Option<&Style>;
-}
+type ComponentRef = Arc<Mutex<ComponentType>>;
 
-type ComponentRef = Arc<Mutex<Component>>;
-
-pub struct ComponentContainer {
+pub struct Component {
     component: ComponentRef,
     children: Vec<Self>,
     parent: Option<ComponentRef>,
 }
 
-impl ComponentContainer {
-    pub fn new<C: Into<Component>>(component: C) -> ComponentContainer {
-        ComponentContainer {
+impl Clone for Component {
+    fn clone(&self) -> Self {
+        let component = self.component().clone();
+        let component = Arc::new(Mutex::new(component));
+
+        let children = self.children.clone();
+
+        let mut component = Component {
+            component,
+            children,
+            parent: None,
+        };
+
+        for child_component in &mut component.children {
+            child_component.parent = Some(component.component.clone());
+        }
+
+        component
+    }
+}
+
+impl Component {
+    pub fn new<C: Into<ComponentType>>(component: C) -> Component {
+        Component {
             component: Arc::new(Mutex::new(component.into())),
             children: vec![],
             parent: None,
         }
     }
 
-    pub fn component(&self) -> MutexGuard<'_, Component> {
+    pub fn component(&self) -> MutexGuard<'_, ComponentType> {
         self.component.lock().unwrap()
     }
 
-    pub fn append(&mut self, mut container: ComponentContainer) {
+    pub fn append(&mut self, mut container: Component) {
         container.parent = Some(self.component.clone());
         self.children.push(container);
-    }
-}
-
-pub fn test() {
-    let c1 = TextComponent { text: String::from("") };
-    let c2 = TextComponent { text: String::from("This is some sample text.") };
-
-    let mut cc1 = ComponentContainer::new(c1);
-    let cc2 = ComponentContainer::new(c2);
-
-    cc1.append(cc2);
-
-    let component = cc1.children.get(0).unwrap().component();
-
-    if let Component::Text(ref component) = *component {
-        println!("Test! {}", component.text);
     }
 }

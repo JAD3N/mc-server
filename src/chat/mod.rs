@@ -1,4 +1,6 @@
+#[macro_use]
 pub mod component;
+
 mod color;
 mod style;
 mod click_event;
