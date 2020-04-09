@@ -1,80 +1,110 @@
-#[macro_export]
-macro_rules! component {
-    ($name:ident { $( $field:ident: $ty:ty ),* $(,)* }) => {
-        use crate::chat::Style;
+/*a component has ->
+    style
+    siblings
+    contents
+    can be serialized to and from json
+*/
 
-        #[derive(Clone)]
+use super::Style;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+pub trait Component {
+    fn style(&self) -> &Rc<RefCell<Style>>;
+    fn style_mut(&mut self) -> &mut Rc<RefCell<Style>>;
+
+    fn siblings(&self) -> &Vec<Box<dyn Component>>;
+    fn append(&mut self, component: Box<dyn Component>);
+
+    fn contents(&self) -> &str {
+        ""
+    }
+}
+
+// pub struct TextComponent {
+//     style: Rc<RefCell<Style>>,
+//     siblings: Vec<Box<dyn Component>>,
+//     text: String,
+// }
+
+// impl Component for TextComponent {
+//     fn style(&self) -> &Rc<RefCell<Style>> {
+//         &self.style
+//     }
+
+//     fn style_mut(&mut self) -> &mut Rc<RefCell<Style>> {
+//         &mut self.style
+//     }
+
+//     fn siblings(&self) -> &Vec<Box<dyn Component>> {
+//         &self.siblings
+//     }
+
+//     fn append(&mut self, component: Box<dyn Component>) {
+//         // adjust child component style
+//         let mut style = component.style().borrow_mut();
+//         style.set_parent(Some(self.style.clone()));
+//         drop(style);
+
+//         // push to siblings
+//         self.siblings.push(component);
+//     }
+
+//     fn contents(&self) -> &str {
+//         self.get_text()
+//     }
+// }
+
+#[macro_export]
+macro_rules! base_component {
+    ($name:ident { $( $field:ident: $ty:ty ),* $(,)* }) => {
+        base_component!($name { $( $field: $ty ),* }, self => { "" });
+    };
+    ($name:ident { $( $field:ident: $ty:ty ),* $(,)* }, $self_:ident => $contents:block) => {
         pub struct $name {
-            style: Style,
+            style: Rc<RefCell<Style>>,
+            siblings: Vec<Box<dyn Component>>,
             $( $field: $ty ),*
         }
 
-        impl $name {
-            pub fn style(&self) -> &Style {
+        impl Component for $name {
+            fn style(&self) -> &Rc<RefCell<Style>> {
                 &self.style
             }
 
-            pub fn style_mut(&mut self) -> &mut Style {
+            fn style_mut(&mut self) -> &mut Rc<RefCell<Style>> {
                 &mut self.style
             }
+
+            fn siblings(&self) -> &Vec<Box<dyn Component>> {
+                &self.siblings
+            }
+
+            fn append(&mut self, component: Box<dyn Component>) {
+                // adjust child component style
+                let mut style = component.style().borrow_mut();
+                style.set_parent(Some(self.style.clone()));
+                drop(style);
+
+                // push to siblings
+                self.siblings.push(component);
+            }
+
+            fn contents(&$self_) -> &str $contents
         }
     };
 }
 
-mod text;
-pub use text::*;
+base_component!(TextComponent { text: String }, self => {
+    self.text()
+});
 
-use std::sync::{Arc, Mutex, MutexGuard};
-
-#[derive(Clone)]
-pub enum ComponentType {
-    Text(TextComponent),
-}
-
-type ComponentRef = Arc<Mutex<ComponentType>>;
-
-pub struct Component {
-    component: ComponentRef,
-    children: Vec<Self>,
-    parent: Option<ComponentRef>,
-}
-
-impl Clone for Component {
-    fn clone(&self) -> Self {
-        let component = self.component().clone();
-        let component = Arc::new(Mutex::new(component));
-
-        let children = self.children.clone();
-
-        let mut component = Component {
-            component,
-            children,
-            parent: None,
-        };
-
-        for child_component in &mut component.children {
-            child_component.parent = Some(component.component.clone());
-        }
-
-        component
-    }
-}
-
-impl Component {
-    pub fn new<C: Into<ComponentType>>(component: C) -> Component {
-        Component {
-            component: Arc::new(Mutex::new(component.into())),
-            children: vec![],
-            parent: None,
-        }
+impl TextComponent {
+    pub fn text(&self) -> &str {
+        &self.text
     }
 
-    pub fn component(&self) -> MutexGuard<'_, ComponentType> {
-        self.component.lock().unwrap()
-    }
-
-    pub fn append(&mut self, mut container: Component) {
-        container.parent = Some(self.component.clone());
-        self.children.push(container);
+    pub fn set_text<T: Into<String>>(&mut self, text: T) {
+        self.text = text.into();
     }
 }

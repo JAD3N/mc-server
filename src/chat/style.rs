@@ -1,4 +1,6 @@
 use super::{Color, ClickEvent, HoverEvent};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum StyleTrait {
@@ -13,6 +15,7 @@ pub enum StyleTrait {
 }
 
 traitable!(StyleTrait, Style {
+    parent: Option<Rc<RefCell<Style>>>,
     color: Option<Color>,
     click_event: Option<ClickEvent>,
     hover_event: Option<HoverEvent>,
@@ -21,11 +24,16 @@ traitable!(StyleTrait, Style {
 impl Style {
     pub fn new() -> Style {
         Style {
+            parent: None,
             traits: vec![],
             color: None,
             click_event: None,
             hover_event: None,
         }
+    }
+
+    pub fn set_parent(&mut self, parent: Option<Rc<RefCell<Style>>>) {
+        self.parent = parent;
     }
 
     pub fn set_color(&mut self, color: Option<Color>) {
@@ -38,7 +46,7 @@ impl Style {
         }
     }
 
-    pub fn get_color(&self) -> Option<Color> {
+    pub fn color(&self) -> Option<Color> {
         self.color
     }
 
@@ -52,7 +60,7 @@ impl Style {
         }
     }
 
-    pub fn get_click_event(&self) -> Option<&ClickEvent> {
+    pub fn click_event(&self) -> Option<&ClickEvent> {
         self.click_event.as_ref()
     }
 
@@ -66,7 +74,7 @@ impl Style {
         }
     }
 
-    pub fn get_hover_event(&self) -> Option<&HoverEvent> {
+    pub fn hover_event(&self) -> Option<&HoverEvent> {
         self.hover_event.as_ref()
     }
 

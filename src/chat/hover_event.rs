@@ -13,5 +13,5 @@ pub enum HoverEventAction {
 #[derive(Clone)]
 pub struct HoverEvent {
     pub action: HoverEventAction,
-    pub value: Component,
+    // pub value: Component,
 }
