@@ -12,7 +12,7 @@ pub mod world;
 pub mod chat;
 
 use std::env;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, RwLock};
 use server::{Server, Settings, Ticker, Watcher};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::rolling_file::RollingFileAppender;
@@ -68,7 +68,7 @@ fn main() {
 
     let settings = get_server_settings();
 
-    let server = Arc::new(Mutex::new(Server::new(settings)));
+    let server = Arc::new(RwLock::new(Server::new(settings)));
     let ticker = Ticker::new(server.clone());
     let ticker_handle = ticker.run();
 

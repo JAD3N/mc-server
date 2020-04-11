@@ -1,20 +1,20 @@
 use crate::util;
 use super::{Server, ServerData};
 use std::thread;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 pub const TICK: u64 = 50;
 pub const WARNING_THRESHOLD: u64 = 2000;
 pub const WARNING_DELAY: u64 = 15000;
 
 pub struct Ticker {
-    server: Arc<Mutex<Server>>,
-    server_data: Arc<Mutex<ServerData>>,
+    server: Arc<RwLock<Server>>,
+    server_data: Arc<RwLock<ServerData>>,
 }
 
 impl Ticker {
-    pub fn new(server: Arc<Mutex<Server>>) -> Ticker {
-        let server_data = server.lock()
+    pub fn new(server: Arc<RwLock<Server>>) -> Ticker {
+        let server_data = server.read()
             .unwrap()
             .data()
             .clone();
@@ -23,7 +23,7 @@ impl Ticker {
     }
 
     fn tick(&mut self) -> Option<u64> {
-        let mut server_data = self.server_data.lock().unwrap();
+        let mut server_data = self.server_data.write().unwrap();
 
         if server_data.is_running {
             let now = util::get_millis();
@@ -48,7 +48,7 @@ impl Ticker {
 
             drop(server_data);
 
-            self.server.lock()
+            self.server.write()
                 .unwrap()
                 .tick();
 
@@ -59,7 +59,7 @@ impl Ticker {
     }
 
     pub fn run(mut self) -> Option<thread::JoinHandle<()>> {
-        let mut server = self.server.lock().ok()?;
+        let mut server = self.server.write().ok()?;
 
         if server.is_running() {
             None
@@ -71,7 +71,7 @@ impl Ticker {
                 .name(String::from("Server thread"));
 
             Some(thread_builder.spawn(move || {
-                while self.server_data.lock().unwrap().is_running {
+                while self.server_data.read().unwrap().is_running {
                     if let Some(delay) = self.tick() {
                         util::sleep(delay);
                     }

@@ -12,6 +12,18 @@ traitable!(DimensionTrait, Dimension {
     folder: &'static str,
 });
 
+impl Clone for Dimension {
+    fn clone(&self) -> Self {
+        Dimension {
+            id: self.id,
+            name: self.name,
+            suffix: self.suffix,
+            folder: self.folder,
+            traits: self.traits.clone(),
+        }
+    }
+}
+
 macro_rules! dimension_type {
     ($id:expr, $name:expr, $suffix:expr, $folder:expr) => {
         dimension_type!($id, $name, $suffix, $folder, []);

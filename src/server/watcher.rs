@@ -1,16 +1,16 @@
 use std::process;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use crate::util;
 use super::{Server, ServerData, TICK};
 
 pub struct Watcher {
     max_tick_time: i32,
-    server_data: Arc<Mutex<ServerData>>,
+    server_data: Arc<RwLock<ServerData>>,
 }
 
 impl Watcher {
-    pub fn new(server: &Arc<Mutex<Server>>) -> Watcher {
-        let server_lock = server.lock().unwrap();
+    pub fn new(server: &Arc<RwLock<Server>>) -> Watcher {
+        let server_lock = server.read().unwrap();
         let server_data = server_lock.data().clone();
         let max_tick_time = server_lock.settings().max_tick_time();
 
@@ -28,7 +28,7 @@ impl Watcher {
         let max_tick_time = self.max_tick_time as u64;
 
         loop {
-            let server_data = self.server_data.lock().unwrap();
+            let server_data = self.server_data.write().unwrap();
 
             // check if server is running
             if !server_data.is_running {

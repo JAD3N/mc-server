@@ -9,9 +9,7 @@ pub enum HoverEventAction {
     ChangePage,
     CopyToClipboard,
 }
-
-#[derive(Clone)]
 pub struct HoverEvent {
     pub action: HoverEventAction,
-    // pub value: Component,
+    pub value: Box<dyn Component>,
 }

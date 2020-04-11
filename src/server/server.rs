@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use crate::util;
 use super::Settings;
@@ -16,7 +16,7 @@ pub struct ServerData {
 pub struct Server {
     pool: ThreadPool,
     settings: Settings,
-    data: Arc<Mutex<ServerData>>,
+    data: Arc<RwLock<ServerData>>,
     tick_times: [u64; 100],
     average_tick_time: f32,
 }
@@ -28,7 +28,7 @@ impl Server {
             .create()
             .unwrap();
 
-        let data = Arc::new(Mutex::new(ServerData {
+        let data = Arc::new(RwLock::new(ServerData {
             is_running: false,
             tick_count: 0,
             next_tick: 0,
@@ -44,16 +44,16 @@ impl Server {
         }
     }
 
-    pub fn data(&self) -> &Arc<Mutex<ServerData>> {
+    pub fn data(&self) -> &Arc<RwLock<ServerData>> {
         &self.data
     }
 
     pub fn is_running(&self) -> bool {
-        self.data.lock().unwrap().is_running
+        self.data.read().unwrap().is_running
     }
 
     pub fn tick_count(&self) -> u64 {
-        self.data.lock().unwrap().tick_count
+        self.data.read().unwrap().tick_count
     }
 
     pub fn settings(&self) -> &Settings {
@@ -61,7 +61,7 @@ impl Server {
     }
 
     pub fn init(&mut self) {
-        let mut data = self.data.lock().unwrap();
+        let mut data = self.data.write().unwrap();
 
         data.is_running = true;
         data.tick_count = 0;
@@ -72,7 +72,7 @@ impl Server {
     pub fn tick(&mut self) {
         let start_time = util::get_nanos();
         let tick_count = {
-            let mut data = self.data.lock().unwrap();
+            let mut data = self.data.write().unwrap();
             if !data.is_running {
                 return;
             }
@@ -96,5 +96,9 @@ impl Server {
 
         self.average_tick_time *= (TICK_SAMPLE - 1.0) / TICK_SAMPLE;
         self.average_tick_time += (total_time as f32) / TICK_SAMPLE;
+
+        if tick_count % 20 == 0 {
+            info!("Tick time: {}", self.average_tick_time);
+        }
     }
 }
