@@ -63,8 +63,10 @@ fn get_server_settings() -> Settings {
 
 fn main() {
     init_logger();
-
     info!("Starting server...");
+
+    let c = chat::component::TextComponent::from_str("This is a test!");
+    info!("{}", serde_json::to_string(&c).unwrap());
 
     let settings = get_server_settings();
 
