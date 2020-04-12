@@ -1,6 +1,5 @@
-use serde::ser::{Serializer, Serialize, SerializeStruct};
-
-use super::{Style, Component};
+use super::{Style, Component, ComponentType};
+use crate::util::JsonValue;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -32,7 +31,24 @@ impl TextComponent {
     }
 }
 
+impl JsonValue for TextComponent {
+    fn to_json(&self) -> Option<serde_json::Value> {
+        let mut json = json!({
+            "text": &self.text,
+        });
+
+        self.add_extra_json(&mut json);
+        self.add_style_json(&mut json);
+
+        Some(json)
+    }
+}
+
 impl Component for TextComponent {
+    fn type_(&self) -> ComponentType {
+        ComponentType::Text
+    }
+
     fn style(&self) -> &Rc<RefCell<Style>> {
         &self.style
     }
@@ -51,13 +67,5 @@ impl Component for TextComponent {
 
     fn contents(&self) -> &str {
         &self.text
-    }
-}
-
-impl Serialize for TextComponent {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut state = serializer.serialize_struct("TextComponent", 1)?;
-        state.serialize_field("text", &self.text)?;
-        state.end()
     }
 }

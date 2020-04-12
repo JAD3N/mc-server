@@ -2,6 +2,10 @@
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate mopa;
+#[macro_use]
+extern crate serde_json;
 
 #[macro_use]
 pub mod util;
@@ -65,8 +69,14 @@ fn main() {
     init_logger();
     info!("Starting server...");
 
-    let c = chat::component::TextComponent::from_str("This is a test!");
-    info!("{}", serde_json::to_string(&c).unwrap());
+    use chat::component::{Component, TextComponent};
+    use util::JsonValue;
+
+    let mut c = TextComponent::from_str("This is a test!");
+    c.append(Box::new(TextComponent::from_str("test 2")));
+    c.append(Box::new(TextComponent::from_str("test 3")));
+
+    info!("{}", c.to_json().unwrap());
 
     let settings = get_server_settings();
 
