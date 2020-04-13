@@ -1,96 +1,50 @@
 use super::{Color, ClickEvent, HoverEvent};
 use crate::util::JsonValue;
+use serde_json::Value;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum StyleTrait {
-    Bold,
-    Italic,
-    Strikethrough,
-    Underline,
-    Obfuscated,
-    ClickEvent,
-    HoverEvent,
+pub struct Style {
+    pub parent: Option<Rc<RefCell<Style>>>,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
+    pub underlined: Option<bool>,
+    pub strikethrough: Option<bool>,
+    pub obfuscated: Option<bool>,
+    pub color: Option<Color>,
+    pub insertion: Option<String>,
+    pub click_event: Option<ClickEvent>,
+    pub hover_event: Option<HoverEvent>,
 }
 
-traitable!(StyleTrait, Style {
-    parent: Option<Rc<RefCell<Style>>>,
-    color: Option<Color>,
-    click_event: Option<ClickEvent>,
-    hover_event: Option<HoverEvent>,
-    insertion: Option<String>,
-});
-
-impl Style {
-    pub fn new() -> Style {
+impl Default for Style {
+    fn default() -> Style {
         Style {
             parent: None,
-            traits: vec![],
+            bold: None,
+            italic: None,
+            underlined: None,
+            strikethrough: None,
+            obfuscated: None,
             color: None,
+            insertion: None,
             click_event: None,
             hover_event: None,
-            insertion: None,
         }
     }
+}
 
-    pub fn set_parent(&mut self, parent: Option<Rc<RefCell<Style>>>) {
-        self.parent = parent;
-    }
-
-    pub fn set_color(&mut self, color: Option<Color>) {
-        self.color = color;
-    }
-
-    pub fn color(&self) -> Option<Color> {
-        self.color
-    }
-
-    pub fn set_click_event(&mut self, click_event: Option<ClickEvent>) {
-        self.click_event = click_event;
-    }
-
-    pub fn hover_event(&self) -> Option<&HoverEvent> {
-        self.hover_event.as_ref()
-    }
-
-    pub fn set_hover_event(&mut self, hover_event: Option<HoverEvent>) {
-        self.hover_event = hover_event;
-    }
-
-    pub fn insertion(&self) -> Option<&String> {
-        self.insertion.as_ref()
-    }
-
-    pub fn set_insertion(&mut self, insertion: Option<String>) {
-        self.insertion = insertion;
-    }
-
-    pub fn reset(&mut self) {
-        self.traits = vec![];
-        self.color = None;
-        self.click_event = None;
-        self.hover_event = None;
-        self.insertion = None;
-    }
-
+impl Style {
     pub fn is_empty(&self) -> bool {
-        use StyleTrait::*;
-
-        if self.color.is_some()
-            || self.click_event.is_some()
-            || self.hover_event.is_some()
-            || self.insertion.is_some() {
-            false
-        } else {
-            self.has(Bold)
-                || self.has(Italic)
-                || self.has(Strikethrough)
-                || self.has(Underline)
-                || self.has(Obfuscated)
-                || self.has(ClickEvent)
-                || self.has(HoverEvent)
-        }
+        self.bold.is_none()
+            && self.italic.is_none()
+            && self.underlined.is_none()
+            && self.strikethrough.is_none()
+            && self.obfuscated.is_none()
+            && self.color.is_none()
+            && self.insertion.is_none()
+            && self.click_event.is_none()
+            && self.hover_event.is_none()
     }
 }
 
@@ -99,9 +53,45 @@ impl JsonValue for Style {
         if self.is_empty() {
             None
         } else {
-            
+            let mut json = json!({});
 
-            None
+            if let Some(bold) = self.bold {
+                json["bold"] = Value::Bool(bold);
+            }
+
+            if let Some(italic) = self.italic {
+                json["italic"] = Value::Bool(italic);
+            }
+
+            if let Some(underlined) = self.underlined {
+                json["underlined"] = Value::Bool(underlined);
+            }
+
+            if let Some(strikethrough) = self.strikethrough {
+                json["strikethrough"] = Value::Bool(strikethrough);
+            }
+
+            if let Some(obfuscated) = self.obfuscated {
+                json["obfuscated"] = Value::Bool(obfuscated);
+            }
+
+            if let Some(color) = self.color {
+                json["color"] = color.to_json().unwrap();
+            }
+
+            if let Some(insertion) = &self.insertion {
+                json["insertion"] = Value::String(insertion.clone());
+            }
+
+            if let Some(click_event) = &self.click_event {
+                json["clickEvent"] = click_event.to_json().unwrap();
+            }
+
+            if let Some(hover_event) = &self.hover_event {
+                json["hoverEvent"] = hover_event.to_json().unwrap();
+            }
+
+            Some(json)
         }
     }
 }

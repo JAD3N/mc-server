@@ -73,6 +73,9 @@ fn main() {
     use util::JsonValue;
 
     let mut c = TextComponent::from_str("This is a test!");
+    c.style_mut().borrow_mut().bold = Some(true);
+    c.style_mut().borrow_mut().italic = Some(true);
+
     c.append(Box::new(TextComponent::from_str("test 2")));
     c.append(Box::new(TextComponent::from_str("test 3")));
 

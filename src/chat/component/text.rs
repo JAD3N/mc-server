@@ -15,7 +15,7 @@ impl TextComponent {
     }
 
     pub fn from_str(s: &str) -> TextComponent {
-        let style = Rc::new(RefCell::new(Style::new()));
+        let style = Rc::new(RefCell::new(Style::default()));
         let siblings = vec![];
         let text = String::from(s);
 

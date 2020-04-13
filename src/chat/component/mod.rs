@@ -20,14 +20,11 @@ pub trait Component: mopa::Any + JsonValue {
     }
 
     fn add_style_json(&self, json: &mut serde_json::Value) {
-        // let extra: Vec<serde_json::Value> = self.siblings()
-        //     .iter()
-        //     .map(|sibling| sibling.to_json())
-        //     .collect();
+        let style_json = self.style().borrow().to_json();
 
-        // if !extra.is_empty() {
-        //     json["extra"] = json!(extra);
-        // }
+        if let Some(style_json) = style_json {
+            json["style"] = style_json;
+        }
     }
 
     fn style(&self) -> &Rc<RefCell<Style>>;
@@ -39,7 +36,7 @@ pub trait Component: mopa::Any + JsonValue {
     fn append(&mut self, sibling: Box<dyn Component>) {
         // adjust child component style
         let mut style = sibling.style().borrow_mut();
-        style.set_parent(Some(self.style().clone()));
+        style.parent = Some(self.style().clone());
         drop(style);
 
         // push to siblings
