@@ -19,7 +19,7 @@ impl HoverEventAction {
 }
 pub struct HoverEvent {
     pub action: HoverEventAction,
-    pub value: Box<dyn Component>,
+    pub value: Box<dyn Component + Send + Sync>,
 }
 
 impl ToJsonValue for HoverEvent {

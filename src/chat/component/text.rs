@@ -1,10 +1,10 @@
-use super::{Style, Component, ComponentType};
+use super::{Style, Component, BoxedComponent, ComponentType};
 use crate::util::ToJsonValue;
 use std::sync::{Arc, RwLock};
 
 pub struct TextComponent {
     style: Arc<RwLock<Style>>,
-    siblings: Vec<Box<dyn Component>>,
+    siblings: Vec<Box<dyn Component + Send + Sync>>,
     text: String,
 }
 
@@ -19,6 +19,7 @@ impl TextComponent {
         let text = String::from(s);
 
         TextComponent { style, siblings, text }
+        // TextComponent { style, text }
     }
 
     pub fn text(&self) -> &str {
@@ -43,6 +44,12 @@ impl ToJsonValue for TextComponent {
     }
 }
 
+impl Into<BoxedComponent> for TextComponent {
+    fn into(self) -> BoxedComponent {
+        Box::new(self)
+    }
+}
+
 impl Component for TextComponent {
     fn type_(&self) -> ComponentType {
         ComponentType::Text
@@ -56,15 +63,19 @@ impl Component for TextComponent {
         &mut self.style
     }
 
-    fn siblings(&self) -> &Vec<Box<dyn Component>> {
+    fn siblings(&self) -> &Vec<Box<dyn Component + Send + Sync>> {
         &self.siblings
     }
 
-    fn siblings_mut(&mut self) -> &mut Vec<Box<dyn Component>> {
+    fn siblings_mut(&mut self) -> &mut Vec<Box<dyn Component + Send + Sync>> {
         &mut self.siblings
     }
 
     fn contents(&self) -> &str {
         &self.text
+    }
+
+    fn into_box(self) -> BoxedComponent {
+        self.into()
     }
 }

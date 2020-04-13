@@ -1,4 +1,5 @@
 use crate::{
+    chat::component::BoxedComponent,
     chat::component::TextComponent,
     util::ToJsonValue,
     auth::Profile,
@@ -52,7 +53,7 @@ impl ToJsonValue for ServerStatusPlayers {
 }
 
 pub struct ServerStatus {
-    pub description: Option<TextComponent>,
+    pub description: Option<BoxedComponent>,
     pub players: Option<ServerStatusPlayers>,
     pub version: Option<ServerStatusVersion>,
     pub favicon: Option<String>,
@@ -60,10 +61,25 @@ pub struct ServerStatus {
 
 impl ServerStatus {
     pub fn new() -> ServerStatus {
+        let description: Option<BoxedComponent> = Some(Box::new(TextComponent::from_str("Test!")));
+        let players = Some(ServerStatusPlayers {
+            max_players: 123,
+            num_players: 0,
+            sample: vec![
+                Profile::from_name("Jaden"),
+                Profile::from_name("was"),
+                Profile::from_name("here"),
+            ],
+        });
+        let version = Some(ServerStatusVersion {
+            name: String::from("Test!"),
+            protocol: 123,
+        });
+
         ServerStatus {
-            description: None,
-            players: None,
-            version: None,
+            description,
+            players,
+            version,
             favicon: None,
         }
     }

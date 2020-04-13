@@ -44,10 +44,10 @@ impl Profile {
         }
     }
 
-    pub fn from_name(name: String) -> Self {
+    pub fn from_name<S: Into<String>>(name: S) -> Self {
         Profile {
             uuid: None,
-            name: Some(name),
+            name: Some(name.into()),
             legacy: false,
         }
     }
