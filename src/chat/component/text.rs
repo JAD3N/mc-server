@@ -1,10 +1,9 @@
 use super::{Style, Component, ComponentType};
-use crate::util::JsonValue;
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::util::ToJsonValue;
+use std::sync::{Arc, RwLock};
 
 pub struct TextComponent {
-    style: Rc<RefCell<Style>>,
+    style: Arc<RwLock<Style>>,
     siblings: Vec<Box<dyn Component>>,
     text: String,
 }
@@ -15,7 +14,7 @@ impl TextComponent {
     }
 
     pub fn from_str(s: &str) -> TextComponent {
-        let style = Rc::new(RefCell::new(Style::default()));
+        let style = Arc::new(RwLock::new(Style::default()));
         let siblings = vec![];
         let text = String::from(s);
 
@@ -31,7 +30,7 @@ impl TextComponent {
     }
 }
 
-impl JsonValue for TextComponent {
+impl ToJsonValue for TextComponent {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({
             "text": &self.text,
@@ -49,11 +48,11 @@ impl Component for TextComponent {
         ComponentType::Text
     }
 
-    fn style(&self) -> &Rc<RefCell<Style>> {
+    fn style(&self) -> &Arc<RwLock<Style>> {
         &self.style
     }
 
-    fn style_mut(&mut self) -> &mut Rc<RefCell<Style>> {
+    fn style_mut(&mut self) -> &mut Arc<RwLock<Style>> {
         &mut self.style
     }
 

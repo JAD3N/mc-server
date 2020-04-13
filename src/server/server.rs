@@ -1,7 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use crate::util;
-use super::Settings;
+use super::{Settings, ServerStatus};
 
 const TICK_SAMPLE: f32 = 10.0;
 
@@ -16,6 +16,7 @@ pub struct ServerData {
 pub struct Server {
     pool: ThreadPool,
     settings: Settings,
+    status: Mutex<ServerStatus>,
     data: Arc<RwLock<ServerData>>,
     tick_times: [u64; 100],
     average_tick_time: f32,
@@ -35,9 +36,12 @@ impl Server {
             last_warning: 0,
         }));
 
+        let status = Mutex::new(ServerStatus::new());
+
         Server {
             pool,
             settings,
+            status,
             data,
             tick_times: [0; 100],
             average_tick_time: 0.0,

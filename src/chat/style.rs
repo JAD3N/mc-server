@@ -1,11 +1,10 @@
 use super::{Color, ClickEvent, HoverEvent};
-use crate::util::JsonValue;
+use crate::util::ToJsonValue;
 use serde_json::Value;
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::sync::{Arc, RwLock};
 
 pub struct Style {
-    pub parent: Option<Rc<RefCell<Style>>>,
+    pub parent: Option<Arc<RwLock<Style>>>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underlined: Option<bool>,
@@ -48,7 +47,7 @@ impl Style {
     }
 }
 
-impl JsonValue for Style {
+impl ToJsonValue for Style {
     fn to_json(&self) -> Option<serde_json::Value> {
         if self.is_empty() {
             None

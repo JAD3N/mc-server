@@ -1,6 +1,6 @@
 use regex::Regex;
 use std::fmt;
-use crate::util::JsonValue;
+use crate::util::ToJsonValue;
 
 lazy_static! {
     static ref IS_COLOR: Regex = Regex::new(&format!("(?i){}[0-9A-FK-OR]", Color::COLOR_CHAR)).unwrap();
@@ -98,9 +98,9 @@ impl Color {
     }
 }
 
-impl JsonValue for Color {
+impl ToJsonValue for Color {
     fn to_json(&self) -> Option<serde_json::Value> {
-        Some(serde_json::Value::String(String::from(self.name)))
+        Some(json!(self.name))
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::util::JsonValue;
+use crate::util::ToJsonValue;
 use super::component::Component;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -22,7 +22,7 @@ pub struct HoverEvent {
     pub value: Box<dyn Component>,
 }
 
-impl JsonValue for HoverEvent {
+impl ToJsonValue for HoverEvent {
     fn to_json(&self) -> Option<serde_json::Value> {
         Some(json!({
             "action": self.action.name(),

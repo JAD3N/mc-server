@@ -12,6 +12,7 @@ pub mod util;
 pub mod core;
 pub mod server;
 pub mod world;
+pub mod auth;
 #[macro_use]
 pub mod chat;
 
@@ -68,18 +69,6 @@ fn get_server_settings() -> Settings {
 fn main() {
     init_logger();
     info!("Starting server...");
-
-    use chat::component::{Component, TextComponent};
-    use util::JsonValue;
-
-    let mut c = TextComponent::from_str("This is a test!");
-    c.style_mut().borrow_mut().bold = Some(true);
-    c.style_mut().borrow_mut().italic = Some(true);
-
-    c.append(Box::new(TextComponent::from_str("test 2")));
-    c.append(Box::new(TextComponent::from_str("test 3")));
-
-    info!("{}", c.to_json().unwrap());
 
     let settings = get_server_settings();
 

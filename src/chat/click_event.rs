@@ -1,4 +1,4 @@
-use crate::util::JsonValue;
+use crate::util::ToJsonValue;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ClickEventAction {
@@ -28,7 +28,7 @@ pub struct ClickEvent {
     pub value: String,
 }
 
-impl JsonValue for ClickEvent {
+impl ToJsonValue for ClickEvent {
     fn to_json(&self) -> Option<serde_json::Value> {
         Some(json!({
             "action": self.action.name(),
