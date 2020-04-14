@@ -1,3 +1,5 @@
+#![feature(trait_alias)]
+
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -9,15 +11,17 @@ extern crate serde_json;
 
 #[macro_use]
 pub mod util;
+#[macro_use]
+pub mod chat;
+#[macro_use]
 pub mod core;
 pub mod server;
 pub mod world;
 pub mod auth;
-#[macro_use]
-pub mod chat;
 
 use std::env;
 use std::sync::{Arc, RwLock};
+use crate::core::registry::Registerable;
 use server::{Server, Settings, Ticker, Watcher};
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::rolling_file::RollingFileAppender;
@@ -66,8 +70,15 @@ fn get_server_settings() -> Settings {
     server::Settings::load(path)
 }
 
+fn register() {
+    world::level::Blocks::register();
+}
+
 fn main() {
     init_logger();
+
+    register();
+
     info!("Starting server...");
 
     let settings = get_server_settings();

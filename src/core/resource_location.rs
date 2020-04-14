@@ -77,12 +77,14 @@ impl ResourceLocation {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::ResourceLocation;
+impl Into<ResourceLocation> for &str {
+    fn into(self) -> ResourceLocation {
+        ResourceLocation::parse(self).unwrap()
+    }
+}
 
-    #[test]
-    fn parse() {
-        println!("{}", ResourceLocation::parse("minecraft@test1234").unwrap_err());
+impl Into<ResourceLocation> for String {
+    fn into(self) -> ResourceLocation {
+        ResourceLocation::parse(&self).unwrap()
     }
 }
