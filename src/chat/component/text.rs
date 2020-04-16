@@ -1,4 +1,4 @@
-use super::{Style, Component, BoxedComponent, ComponentType};
+use super::{Style, Component, BoxedComponent};
 use crate::util::ToJsonValue;
 use std::sync::{Arc, RwLock};
 
@@ -19,7 +19,6 @@ impl TextComponent {
         let text = String::from(s);
 
         TextComponent { style, siblings, text }
-        // TextComponent { style, text }
     }
 
     pub fn text(&self) -> &str {
@@ -51,10 +50,6 @@ impl Into<BoxedComponent> for TextComponent {
 }
 
 impl Component for TextComponent {
-    fn type_(&self) -> ComponentType {
-        ComponentType::Text
-    }
-
     fn style(&self) -> &Arc<RwLock<Style>> {
         &self.style
     }

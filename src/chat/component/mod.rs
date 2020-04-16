@@ -7,8 +7,6 @@ use std::sync::{Arc, RwLock};
 pub type BoxedComponent = Box<dyn Component + Send + Sync>;
 
 pub trait Component: mopa::Any + ToJsonValue {
-    fn type_(&self) -> ComponentType;
-
     fn add_extra_json(&self, json: &mut serde_json::Value) {
         let extra: Vec<serde_json::Value> = self.siblings()
             .iter()
@@ -55,11 +53,6 @@ pub trait Component: mopa::Any + ToJsonValue {
     }
 
     fn into_box(self) -> BoxedComponent;
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum ComponentType {
-    Text,
 }
 
 mopafy!(Component);

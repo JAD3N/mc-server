@@ -1,5 +1,9 @@
 #[macro_use]
 pub mod registry;
-mod resource_location;
 
+#[macro_use]
+pub mod sound;
+pub use sound::Sound;
+
+mod resource_location;
 pub use resource_location::*;

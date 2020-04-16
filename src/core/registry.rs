@@ -1,11 +1,12 @@
 use super::ResourceLocation;
+use super::sound::Sound;
 use crate::world::level::Block;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
 pub struct Registry<T> {
     pub keys: Vec<ResourceLocation>,
-    pub values: Vec<T>,
+    pub values: Vec<Arc<T>>,
 }
 
 impl<T> Registry<T> {
@@ -16,11 +17,11 @@ impl<T> Registry<T> {
         }
     }
 
-    pub fn get_value_by_id(&self, id: usize) -> Option<&T> {
+    pub fn get_value_by_id(&self, id: usize) -> Option<&Arc<T>> {
         self.values.get(id)
     }
 
-    pub fn get_value<K: Into<ResourceLocation>>(&self, key: K) -> Option<&T> {
+    pub fn get_value<K: Into<ResourceLocation>>(&self, key: K) -> Option<&Arc<T>> {
         let key = key.into();
 
         for (id, vkey) in self.keys.iter().enumerate() {
@@ -32,35 +33,39 @@ impl<T> Registry<T> {
         None
     }
 
-    pub fn map<K: Into<ResourceLocation>>(&mut self, key: K, value: T) {
+    pub fn register<K: Into<ResourceLocation>>(&mut self, key: K, value: T) -> Arc<T> {
         let key = key.into();
 
         if self.keys.contains(&key) {
             panic!("Cannot re-insert using same key!");
         } else {
             let i = self.keys.len();
+            let value = Arc::new(value);
 
             self.keys.insert(i, key);
-            self.values.insert(i, value);
+            self.values.insert(i, value.clone());
+
+            value
         }
     }
 }
 
-pub trait Registerable {
+pub trait Registrable {
     fn register();
 }
 
 lazy_static! {
     pub static ref BLOCKS: RwLock<Registry<Box<dyn Block>>> = RwLock::new(Registry::new());
+    pub static ref SOUNDS: RwLock<Registry<Sound>> = RwLock::new(Registry::new());
 }
 
 #[macro_export]
 macro_rules! register {
     ($registry:ident, $key:expr, $value:expr) => {
-        crate::core::registry::$registry
+        $registry
             .write()
             .unwrap()
-            .map($key, $value)
+            .register($key, $value)
     };
 }
 

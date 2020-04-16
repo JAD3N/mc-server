@@ -21,8 +21,8 @@ pub mod auth;
 
 use std::env;
 use std::sync::{Arc, RwLock};
-use crate::core::registry::Registerable;
 use server::{Server, Settings, Ticker, Watcher};
+use self::core::registry::Registrable;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::rolling_file::RollingFileAppender;
 use log4rs::append::rolling_file::policy::compound::CompoundPolicy;
@@ -71,12 +71,15 @@ fn get_server_settings() -> Settings {
 }
 
 fn register() {
-    world::level::Blocks::register();
+    debug!("Loading assets...");
+
+    core::sound::Sound::register();
+
+    debug!("Finished loading assets.");
 }
 
 fn main() {
     init_logger();
-
     register();
 
     info!("Starting server...");
