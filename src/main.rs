@@ -21,7 +21,8 @@ pub mod auth;
 
 use std::env;
 use std::sync::{Arc, RwLock};
-use server::{Server, Settings, Ticker, Watcher};
+use server::{Server, Settings};
+// use server::{Server, Settings, Ticker, Watcher};
 use self::core::registry::Registrable;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::rolling_file::RollingFileAppender;
@@ -84,17 +85,11 @@ fn main() {
 
     info!("Starting server...");
 
-    let settings = get_server_settings();
+    let server = Server::new(get_server_settings());
+    let server = Arc::new(RwLock::new(server));
 
-    let server = Arc::new(RwLock::new(Server::new(settings)));
-    let ticker = Ticker::new(server.clone());
-    let ticker_handle = ticker.run();
+    Server::start(&server).join()
+        .expect("Failed joining server thread.");
 
-    info!("{}This is a red {}This is blue", chat::Color::RED, chat::Color::BLUE);
-
-    if let Some(ticker_handle) = ticker_handle {
-        Watcher::new(&server).watch();
-
-        ticker_handle.join().unwrap();
-    }
+    info!("Server stopped.");
 }

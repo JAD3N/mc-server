@@ -1,82 +1,63 @@
 use crate::util;
-use super::{Server, ServerData};
-use std::thread;
-use std::sync::{Arc, RwLock};
+use super::ServerRef;
 
-pub const TICK: u64 = 50;
-pub const WARNING_THRESHOLD: u64 = 2000;
-pub const WARNING_DELAY: u64 = 15000;
+const WARNING_THRESHOLD: u64 = 2000;
+const WARNING_DELAY: u64 = 15000;
 
 pub struct Ticker {
-    server: Arc<RwLock<Server>>,
-    server_data: Arc<RwLock<ServerData>>,
+    server: ServerRef,
 }
 
 impl Ticker {
-    pub fn new(server: Arc<RwLock<Server>>) -> Ticker {
-        let server_data = server.read()
-            .unwrap()
-            .data()
-            .clone();
-
-        Ticker { server, server_data }
+    pub fn new(server: &ServerRef) -> Self {
+        Self { server: server.clone() }
     }
 
-    fn tick(&mut self) -> Option<u64> {
-        let mut server_data = self.server_data.write().unwrap();
+    pub fn start(&mut self, tick_period: u64) {
+        loop {
+            let mut delay = None;
 
-        if server_data.is_running {
-            let now = util::get_millis();
-            let tick_delta = now - server_data.next_tick;
+            {
+                let mut server = self.server.write().unwrap();
 
-            if tick_delta > WARNING_THRESHOLD && now - server_data.last_warning >= WARNING_DELAY {
-                let ticks = tick_delta / TICK;
+                let now = util::get_millis();
+                let tick_delta = now - server.next_tick;
 
-                warn!("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", tick_delta, ticks);
+                if tick_delta > WARNING_THRESHOLD && now - server.last_warning >= WARNING_DELAY {
+                    let ticks = tick_delta / tick_period;
 
-                server_data.next_tick += TICK * ticks;
-                server_data.last_warning = server_data.next_tick;
+                    warn!("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", tick_delta, ticks);
+
+                    // align next tick back to now
+                    server.next_tick += tick_period * ticks;
+                }
+
+                // set next tick time
+                server.next_tick += tick_period;
+
+                if server.next_tick > now {
+                    delay = Some(server.next_tick - now);
+                }
             }
 
-            server_data.next_tick += TICK;
+            if !self.tick() {
+                break;
+            }
 
-            let delay = if server_data.next_tick > now {
-                Some(server_data.next_tick - now)
-            } else {
-                None
-            };
-
-            drop(server_data);
-
-            self.server.write()
-                .unwrap()
-                .tick();
-
-            delay
-        } else {
-            None
+            if let Some(delay) = delay {
+                util::sleep(delay);
+            }
         }
     }
 
-    pub fn run(mut self) -> Option<thread::JoinHandle<()>> {
-        let mut server = self.server.write().ok()?;
+    fn tick(&mut self) -> bool {
+        let mut server = self.server.write().unwrap();
+        let is_running = server.is_running();
 
-        if server.is_running() {
-            None
-        } else {
-            server.init();
-            drop(server);
-
-            let thread_builder = thread::Builder::new()
-                .name(String::from("Server thread"));
-
-            Some(thread_builder.spawn(move || {
-                while self.server_data.read().unwrap().is_running {
-                    if let Some(delay) = self.tick() {
-                        util::sleep(delay);
-                    }
-                }
-            }).unwrap())
+        if is_running {
+            server.tick();
         }
+
+        is_running
     }
 }

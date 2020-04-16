@@ -1,16 +1,15 @@
 use crate::{
     chat::component::BoxedComponent,
-    chat::component::TextComponent,
     util::ToJsonValue,
     auth::Profile,
 };
 
-pub struct ServerStatusVersion {
+pub struct StatusVersion {
     pub name: String,
     pub protocol: i32,
 }
 
-impl ToJsonValue for ServerStatusVersion {
+impl ToJsonValue for StatusVersion {
     fn to_json(&self) -> Option<serde_json::Value> {
         Some(json!({
             "name": &self.name,
@@ -19,13 +18,13 @@ impl ToJsonValue for ServerStatusVersion {
     }
 }
 
-pub struct ServerStatusPlayers {
+pub struct StatusPlayers {
     pub max_players: i32,
     pub num_players: i32,
     pub sample: Vec<Profile>,
 }
 
-impl ToJsonValue for ServerStatusPlayers {
+impl ToJsonValue for StatusPlayers {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({
             "max": self.max_players,
@@ -52,40 +51,25 @@ impl ToJsonValue for ServerStatusPlayers {
     }
 }
 
-pub struct ServerStatus {
+pub struct Status {
     pub description: Option<BoxedComponent>,
-    pub players: Option<ServerStatusPlayers>,
-    pub version: Option<ServerStatusVersion>,
+    pub players: Option<StatusPlayers>,
+    pub version: Option<StatusVersion>,
     pub favicon: Option<String>,
 }
 
-impl ServerStatus {
-    pub fn new() -> ServerStatus {
-        let description: Option<BoxedComponent> = Some(Box::new(TextComponent::from_str("Test!")));
-        let players = Some(ServerStatusPlayers {
-            max_players: 123,
-            num_players: 0,
-            sample: vec![
-                Profile::from_name("Jaden"),
-                Profile::from_name("was"),
-                Profile::from_name("here"),
-            ],
-        });
-        let version = Some(ServerStatusVersion {
-            name: String::from("Test!"),
-            protocol: 123,
-        });
-
-        ServerStatus {
-            description,
-            players,
-            version,
+impl Status {
+    pub fn new() -> Self {
+        Self {
+            description: None,
+            players: None,
+            version: None,
             favicon: None,
         }
     }
 }
 
-impl ToJsonValue for ServerStatus {
+impl ToJsonValue for Status {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({});
 
