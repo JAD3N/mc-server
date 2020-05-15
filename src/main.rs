@@ -9,6 +9,8 @@ extern crate mopa;
 #[macro_use]
 extern crate serde_json;
 extern crate proc_macro;
+#[macro_use]
+extern crate event_bus;
 
 #[macro_use]
 pub mod util;
@@ -33,6 +35,7 @@ use log4rs::encode::pattern::PatternEncoder;
 use log4rs::config::{Appender, Config, Root};
 use log::LevelFilter;
 use futures::join;
+use event_bus::{Event, EventBus};
 
 const LOG_PATTERN: &str = "[{d(%H:%M:%S)}] [{thread}/{h({level})}]: {m}{n}";
 
@@ -79,8 +82,6 @@ fn register() {
 
     debug!("Finished loading assets.");
 }
-
-use self::core::events::*;
 
 struct SimpleEvent;
 impl Event for SimpleEvent {}
