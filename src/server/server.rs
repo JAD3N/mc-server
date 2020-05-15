@@ -80,17 +80,17 @@ impl Server {
         // do any init stuff here (e.g. watcher, and anything that uses server ref)
     }
 
-    pub fn start(server: &ServerRef) -> thread::JoinHandle<()> {
+    pub async fn start(server: &ServerRef) {
         let server = server.clone();
 
         Server::init(&server);
 
-        let thread_builder = thread::Builder::new()
-            .name(String::from("Server thread"));
+        // let thread_builder = thread::Builder::new()
+        //     .name(String::from("Server thread"));
 
-        thread_builder.spawn(move ||
-            Ticker::new(&server).start(50)
-        ).unwrap()
+        // thread_builder.spawn(move ||
+        Ticker::new(&server).start(50).await;
+        // ).unwrap()
     }
 
     pub fn tick(&mut self) {

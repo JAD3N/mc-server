@@ -13,7 +13,7 @@ impl Ticker {
         Self { server: server.clone() }
     }
 
-    pub fn start(&mut self, tick_period: u64) {
+    pub async fn start(&mut self, tick_period: u64) {
         loop {
             let mut delay = None;
 

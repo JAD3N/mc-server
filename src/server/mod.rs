@@ -1,3 +1,5 @@
+pub mod network;
+
 mod settings;
 mod server;
 mod ticker;

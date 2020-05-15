@@ -5,5 +5,8 @@ pub mod registry;
 pub mod sound;
 pub use sound::Sound;
 
+#[macro_use]
+pub mod events;
+
 mod resource_location;
 pub use resource_location::*;
