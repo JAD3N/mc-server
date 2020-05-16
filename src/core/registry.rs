@@ -1,7 +1,6 @@
-use super::ResourceLocation;
-use super::sound::Sound;
-use crate::world::level::Block;
-use std::sync::{Arc, RwLock};
+use crate::core::{ResourceLocation, ResourceLocatable};
+use event_bus::Event;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Registry<T> {
@@ -48,30 +47,20 @@ impl<T> Registry<T> {
             value
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.keys.len()
+    }
 }
 
-pub trait Registrable {
-    fn register();
+impl<T: ResourceLocatable> Registry<T> {
+    pub fn register_locatable(&mut self, value: T) -> Arc<T> {
+        self.register(value.resource_location().clone(), value)
+    }
 }
 
-lazy_static! {
-    pub static ref BLOCKS: RwLock<Registry<Box<dyn Block>>> = RwLock::new(Registry::new());
-    pub static ref SOUNDS: RwLock<Registry<Sound>> = RwLock::new(Registry::new());
+pub struct RegisterEvent<T> {
+    pub registry: Registry<T>,
 }
 
-#[macro_export]
-macro_rules! register {
-    ($registry:ident, $key:expr, $value:expr) => {
-        $registry
-            .write()
-            .unwrap()
-            .register($key, $value)
-    };
-}
-
-#[macro_export]
-macro_rules! registry {
-    ($registry:ident) => {
-        crate::core::registry::$registry;
-    };
-}
+impl<T: 'static> Event for RegisterEvent<T> {}

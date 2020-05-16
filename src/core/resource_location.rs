@@ -22,10 +22,20 @@ impl fmt::Display for ResourceLocationError {
     }
 }
 
-#[derive(PartialEq, Debug)]
+pub trait ResourceLocatable {
+    fn resource_location(&self) -> &ResourceLocation;
+}
+
+#[derive(Clone, Debug)]
 pub struct ResourceLocation {
     namespace: String,
     path: String,
+}
+
+impl PartialEq for ResourceLocation {
+    fn eq(&self, other: &Self) -> bool {
+        self.namespace == other.namespace && self.path == other.path
+    }
 }
 
 impl ResourceLocation {

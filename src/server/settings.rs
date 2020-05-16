@@ -1,5 +1,5 @@
 use crate::util::Properties;
-use crate::world::{level::LevelType, Difficulty, GameMode};
+use crate::world::{level::LevelKind, Difficulty, GameMode};
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct Settings {
     hardcore: bool,
     level_name: String,
     level_seed: String,
-    level_type: LevelType,
+    level_type: LevelKind,
     max_build_height: i32,
     max_players: u32,
     max_tick_time: i32,
@@ -71,7 +71,7 @@ impl Settings {
             hardcore: properties.get_bool_default("hardcore", false),
             level_name: properties.get_default("level-name", "world"),
             level_seed: properties.get_default("level-seed", ""),
-            level_type: Self::get_level_type(&mut properties, "level-type", LevelType::Default),
+            level_type: Self::get_level_kind(&mut properties, "level-type", LevelKind::Default),
             max_build_height: properties.get_i32_default("max-build-height", 256),
             max_players: properties.get_u32_default("max-players", 20),
             max_tick_time: properties.get_i32_default("max-tick-time", 60 * 1000),
@@ -150,4 +150,4 @@ macro_rules! add_custom_fn {
 
 add_custom_fn!(get_difficulty, Difficulty);
 add_custom_fn!(get_game_mode, GameMode);
-add_custom_fn!(get_level_type, LevelType);
+add_custom_fn!(get_level_kind, LevelKind);

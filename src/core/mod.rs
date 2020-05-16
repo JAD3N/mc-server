@@ -1,9 +1,10 @@
 #[macro_use]
-pub mod registry;
+mod registry;
+pub use registry::*;
 
 #[macro_use]
-pub mod sound;
-pub use sound::Sound;
+mod sound;
+pub use sound::*;
 
 mod resource_location;
 pub use resource_location::*;
