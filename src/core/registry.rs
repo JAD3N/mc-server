@@ -1,4 +1,5 @@
-use crate::core::{ResourceLocation, ResourceLocatable};
+use super::{ResourceLocation, ResourceLocatable, Sound};
+use crate::world::level::Block;
 use event_bus::Event;
 use std::sync::Arc;
 
@@ -64,3 +65,34 @@ pub struct RegisterEvent<T> {
 }
 
 impl<T: 'static> Event for RegisterEvent<T> {}
+
+pub struct Registries {
+    pub blocks: Registry<Box<dyn Block>>,
+    pub sounds: Registry<Sound>,
+}
+
+fn init_registry<T: 'static>(name: &str) -> Registry<T> {
+    let mut event = RegisterEvent {
+        registry: Registry::new()
+    };
+
+    // send event to all subscribers to add to registry
+    dispatch_event!("main", &mut event);
+    info!("registries -> Loaded {}: {}", name, event.registry.len());
+
+   event.registry
+}
+
+impl Registries {
+    pub fn new() -> Self {
+        // load registries
+        info!("registries -> Loading registries...");
+
+        let blocks = init_registry("blocks");
+        let sounds = init_registry("sounds");
+
+        info!("registries -> Finished loading registries.");
+
+        Self { blocks, sounds }
+    }
+}

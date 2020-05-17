@@ -1,22 +1,26 @@
 mod kind;
 mod dimension;
 mod block;
+pub mod chunk;
 
 pub use kind::*;
 pub use dimension::*;
 pub use block::*;
 
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use crate::server::Server;
+use self::chunk::ChunkStore;
+
 pub struct Level {
-    dimension: Dimension,
+    pub server: Arc<RwLock<Server>>,
+    // pub dimension: String,
+    // pub chunks: ChunkStore,
 }
 
 impl Level {
-    pub fn new(dimension_name: &str) -> Level {
-        // TODO: Create dimension from dimension type
-        let dimension = Dimension::from_name(dimension_name)
-            .expect(&format!("Invalid dimension: {}", dimension_name))
-            .clone();
-
-        Level { dimension }
+    pub async fn tick(&mut self) {
+        let server = self.server.write();
+        info!("got server!");
     }
 }
