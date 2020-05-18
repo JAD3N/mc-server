@@ -77,11 +77,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     server.load_levels().await;
+    server.listen("127.0.0.1:25565").await;
 
     let time_start = crate::util::get_nanos();
     server.tick().await;
     let time_end = crate::util::get_nanos();
     info!("ticky took {}", time_end - time_start);
+
+    loop {}
 
     Ok(())
 }

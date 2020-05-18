@@ -3,19 +3,19 @@ use std::io;
 use tokio::net::TcpListener;
 
 pub struct Listener {
+    listener: TcpListener,
     addr: SocketAddr,
 }
 
 impl Listener {
-    pub fn bind(addr: SocketAddr) -> Self {
-        Self { addr }
+    pub async fn bind(addr: SocketAddr) -> Result<Self, io::Error> {
+        let listener = TcpListener::bind(addr).await?;
+        Ok(Self { listener, addr })
     }
 
-    pub async fn listen(&mut self) -> Result<(), io::Error> {
-        let mut listener = TcpListener::bind(self.addr).await?;
-
+    pub async fn listen(&mut self) {
         loop {
-            match listener.accept().await {
+            match self.listener.accept().await {
                 Ok(res) => {
                     // panic!("ahh");
                     println!("Test!");
@@ -25,7 +25,5 @@ impl Listener {
                 }
             }
         }
-
-        Ok(())
     }
 }

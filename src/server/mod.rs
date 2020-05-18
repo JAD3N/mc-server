@@ -11,8 +11,11 @@ pub use ticker::*;
 use crate::core::Registries;
 use crate::world::level::Level;
 use self::network::Listener;
+use std::error::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::net;
 use tokio::sync::RwLock;
 use futures::future;
 
@@ -55,7 +58,7 @@ impl Server {
 
 pub struct ServerBuilder {
     pub server: Arc<RwLock<Server>>,
-    pub listener: Option<Listener>,
+    pub listening: Arc<AtomicBool>,
 }
 
 impl ServerBuilder {
@@ -66,7 +69,7 @@ impl ServerBuilder {
             levels: HashMap::new(),
         }));
 
-        Self { server, listener: None }
+        Self { server, listening: Arc::new(AtomicBool::new(false)) }
     }
 
     pub async fn load_levels(&self) {
@@ -81,11 +84,34 @@ impl ServerBuilder {
     }
 
     pub async fn tick(&self) {
+        info!("tick start!");
+        // every tick get lock
         let mut server = self.server.write().await;
         server.tick().await;
+        info!("tick end!");
     }
 
-    pub async fn listen(&mut self) {
-        self.listener = Some(Listener::bind(""));
+    pub async fn listen(&mut self, addr: &str) -> Result<(), net::AddrParseError> {
+        if self.listening.load(Ordering::Relaxed) {
+            panic!("Cannot have multiple listeners!");
+        }
+
+        let addr = addr.parse()?;
+        let listening = self.listening.clone();
+
+        tokio::spawn(async move {
+            let mut listener = Listener::bind(addr).await.unwrap();
+
+            // set listening status to true
+            listening.store(true, Ordering::Relaxed);
+
+            // wait till server is finished listening (closed)
+            listener.listen().await;
+
+            // set listening status to false
+            listening.store(true, Ordering::Relaxed);
+        });
+
+        Ok(())
     }
 }
