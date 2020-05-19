@@ -4,13 +4,11 @@ use tokio::net::TcpListener;
 
 pub struct Listener {
     listener: TcpListener,
-    addr: SocketAddr,
 }
 
 impl Listener {
     pub async fn bind(addr: SocketAddr) -> Result<Self, io::Error> {
-        let listener = TcpListener::bind(addr).await?;
-        Ok(Self { listener, addr })
+        Ok(Self { listener: TcpListener::bind(addr).await? })
     }
 
     pub async fn listen(&mut self) {
