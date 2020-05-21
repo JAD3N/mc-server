@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::env;
 
 #[derive(Debug)]
-pub struct Settings {
+pub struct ServerSettings {
     allow_flight: bool,
     allow_nether: bool,
     broadcast_console_to_ops: bool,
@@ -50,17 +50,17 @@ pub struct Settings {
     white_list: bool,
 }
 
-impl Settings {
-    pub fn load() -> Settings {
+impl ServerSettings {
+    pub fn load() -> ServerSettings {
         let mut path = env::current_dir().unwrap();
         path.push("server.properties");
         Self::load_file(path)
     }
 
-    pub fn load_file(path: PathBuf) -> Settings {
+    pub fn load_file(path: PathBuf) -> ServerSettings {
         let mut properties = Properties::load(path);
 
-        Settings {
+        ServerSettings {
             allow_flight: properties.get_bool_default("allow-flight", false),
             allow_nether: properties.get_bool_default("allow-nether", true),
             broadcast_console_to_ops: properties.get_bool_default("broadcast-console-to-ops", true),
@@ -122,7 +122,7 @@ impl Settings {
 
 macro_rules! add_custom_fn {
     ($fn: ident, $type: ty) => {
-        impl Settings {
+        impl ServerSettings {
             fn $fn(properties: &mut Properties, key: &str, default: $type) -> $type {
                 let value = properties.get(key);
 

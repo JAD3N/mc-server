@@ -1,5 +1,3 @@
-pub mod network;
-
 mod settings;
 mod status;
 mod ticker;
@@ -10,8 +8,7 @@ pub use ticker::*;
 
 use crate::core::Registries;
 use crate::world::level::Level;
-use self::network::Listener;
-use std::error::Error;
+use crate::network::Listener;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,7 +18,7 @@ use futures::future;
 
 pub struct Server {
     pub registries: Arc<Registries>,
-    pub settings: Arc<Settings>,
+    pub settings: Arc<ServerSettings>,
     pub levels: HashMap<String, Arc<RwLock<Level>>>,
 }
 
@@ -62,7 +59,7 @@ pub struct ServerBuilder {
 }
 
 impl ServerBuilder {
-    pub fn new(registries: Registries, settings: Settings) -> Self {
+    pub fn new(registries: Registries, settings: ServerSettings) -> Self {
         let server = Arc::new(RwLock::new(Server {
             registries: Arc::new(registries),
             settings: Arc::new(settings),

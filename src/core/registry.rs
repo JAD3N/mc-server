@@ -1,4 +1,5 @@
 use super::{ResourceLocation, ResourceLocatable, Sound};
+use crate::network::protocol::PacketRegistry;
 use crate::world::level::Block;
 use event_bus::Event;
 use std::sync::Arc;
@@ -67,6 +68,7 @@ pub struct RegisterEvent<T> {
 impl<T: 'static> Event for RegisterEvent<T> {}
 
 pub struct Registries {
+    pub packets: Registry<PacketRegistry>,
     pub blocks: Registry<Box<dyn Block>>,
     pub sounds: Registry<Sound>,
 }
@@ -88,11 +90,12 @@ impl Registries {
         // load registries
         info!("registries -> Loading registries...");
 
+        let packets = init_registry("packet registers");
         let blocks = init_registry("blocks");
         let sounds = init_registry("sounds");
 
         info!("registries -> Finished loading registries.");
 
-        Self { blocks, sounds }
+        Self { packets, blocks, sounds }
     }
 }

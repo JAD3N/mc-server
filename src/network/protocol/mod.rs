@@ -1,25 +1,34 @@
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian};
-use std::io::{self, Read, Write};
+#[macro_use]
+mod packet;
 
-pub trait DataType: Sized {
+pub use packet::*;
+
+use bytes::{Buf, BufMut, BytesMut};
+use std::io;
+use crate::server;
+
+#[async_trait]
+pub trait Protocol {
     fn len(&self) -> usize;
-    fn write<U: Write>(&self, dst: &mut U) -> io::Result<()>;
-    fn read<U: Read>(src: &mut U) -> io::Result<Self>;
+
+    async fn write(&self, dst: &mut BytesMut) -> io::Result<()>  where Self: Sized;
+    async fn read(src: &mut BytesMut) -> io::Result<Self> where Self: Sized;
 }
 
-impl DataType for bool {
+#[async_trait]
+impl Protocol for bool {
     fn len(&self) -> usize {
         1
     }
 
-    fn write<T: Write>(&self, dst: &mut T) -> io::Result<()> {
-        dst.write_u8(if *self { 1 } else { 0 })?;
+    async fn write(&self, dst: &mut BytesMut) -> io::Result<()> {
+        dst.put_u8(if *self { 1 } else { 0 });
         Ok(())
     }
 
 
-    fn read<T: Read>(src: &mut T) -> io::Result<Self> {
-        let value = src.read_u8()?;
+    async fn read(src: &mut BytesMut) -> io::Result<Self> {
+        let value = src.get_i8();
 
         if value > 1 {
             Err(io::Error::new(
@@ -31,10 +40,10 @@ impl DataType for bool {
         }
     }
 }
-
+/*
 pub struct Var<T>(T);
 
-impl DataType for Var<i32> {
+impl Protocol for Var<i32> {
     fn len(&self) -> usize {
         let mut value = self.0;
 
@@ -103,7 +112,7 @@ impl<T: Into<i32>> From<T> for Var<i32> {
     }
 }
 
-impl DataType for Var<i64> {
+impl Protocol for Var<i64> {
     fn len(&self) -> usize {
         let mut value = self.0;
 
@@ -172,7 +181,7 @@ impl<T: Into<i64>> From<T> for Var<i64> {
     }
 }
 
-impl DataType for String {
+impl Protocol for String {
     fn len(&self) -> usize {
         let len = self.len();
         let len_var: Var<i32> = (len as i32).into();
@@ -204,7 +213,7 @@ impl DataType for String {
 
 macro_rules! scalar_data_type {
     ($t:ty, 1, $w:ident, $r:ident) => {
-        impl DataType for $t {
+        impl Protocol for $t {
             fn len(&self) -> usize { 1 }
 
             fn write<T: Write>(&self, dst: &mut T) -> io::Result<()> {
@@ -218,7 +227,7 @@ macro_rules! scalar_data_type {
         }
     };
     ($t:ty, $len:expr, $w:ident, $r:ident) => {
-        impl DataType for $t {
+        impl Protocol for $t {
             fn len(&self) -> usize { $len }
 
             fn write<T: Write>(&self, dst: &mut T) -> io::Result<()> {
@@ -244,4 +253,4 @@ scalar_data_type!(i32, 4, write_i32, read_i32);
 scalar_data_type!(i64, 8, write_i64, read_i64);
 
 scalar_data_type!(f32, 4, write_f32, read_f32);
-scalar_data_type!(f64, 8, write_f64, read_f64);
+scalar_data_type!(f64, 8, write_f64, read_f64);*/

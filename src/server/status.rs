@@ -1,15 +1,16 @@
-use crate::{
-    chat::component::BoxedComponent,
-    util::ToJsonValue,
-    auth::Profile,
-};
+use std::io::{self, Read, Write};
+use std::fmt;
+use crate::network::protocol::Protocol;
+use crate::chat::component::BoxedComponent;
+use crate::util::ToJsonValue;
+use crate::auth::Profile;
 
-pub struct StatusVersion {
+pub struct ServerStatusVersion {
     pub name: String,
     pub protocol: i32,
 }
 
-impl ToJsonValue for StatusVersion {
+impl ToJsonValue for ServerStatusVersion {
     fn to_json(&self) -> Option<serde_json::Value> {
         Some(json!({
             "name": &self.name,
@@ -18,13 +19,13 @@ impl ToJsonValue for StatusVersion {
     }
 }
 
-pub struct StatusPlayers {
+pub struct ServerStatusPlayers {
     pub max_players: i32,
     pub num_players: i32,
     pub sample: Vec<Profile>,
 }
 
-impl ToJsonValue for StatusPlayers {
+impl ToJsonValue for ServerStatusPlayers {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({
             "max": self.max_players,
@@ -51,14 +52,14 @@ impl ToJsonValue for StatusPlayers {
     }
 }
 
-pub struct Status {
+pub struct ServerStatus {
     pub description: Option<BoxedComponent>,
-    pub players: Option<StatusPlayers>,
-    pub version: Option<StatusVersion>,
+    pub players: Option<ServerStatusPlayers>,
+    pub version: Option<ServerStatusVersion>,
     pub favicon: Option<String>,
 }
 
-impl Status {
+impl ServerStatus {
     pub fn new() -> Self {
         Self {
             description: None,
@@ -69,7 +70,7 @@ impl Status {
     }
 }
 
-impl ToJsonValue for Status {
+impl ToJsonValue for ServerStatus {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({});
 
@@ -92,3 +93,23 @@ impl ToJsonValue for Status {
         Some(json)
     }
 }
+
+impl fmt::Display for ServerStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = self.to_json()
+            .unwrap_or(serde_json::Value::Null)
+            .to_string();
+
+        write!(f, "{}", s)
+    }
+}
+
+// impl Protocol for ServerStatus {
+//     fn len(&self) -> usize {
+//         Protocol::len(&self.to_string())
+//     }
+
+//     fn write<U: Write>(&self, dst: &mut U) -> io::Result<()> {
+//         self.to_string().write(dst)
+//     }
+// }
