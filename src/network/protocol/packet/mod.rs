@@ -1,58 +1,50 @@
 mod codec;
 mod direction;
-mod registry;
+mod set;
 mod listener;
+mod handler;
 
 pub use codec::*;
 pub use direction::*;
-pub use registry::*;
+pub use set::*;
 pub use listener::*;
+pub use handler::*;
 
-use super::Protocol;
-
-pub struct StatusPacketListener;
-
-impl PacketListener for StatusPacketListener {
-
-}
-
+use super::ProtocolData;
 use std::any::Any;
+use std::fmt;
 
-pub trait Packet: Protocol {
-    fn handle(&mut self, listener: &mut dyn Any) -> Option<()> {
+pub trait Packet: ProtocolData + Send + Sync + fmt::Debug {
+    fn handle(&mut self, _listener: &mut dyn Any) -> Option<()> {
         Some(())
     }
 }
 
 #[macro_export]
 macro_rules! packet {
-    ($listener:ty, $name:ident { $($fname:ident: $fty:ty),* $(,)? }, $($lfname:ident)?) => {
-        pub struct $name {
-            $(pub $fname: $fty),*
-        }
+    ($listener:ty, $name:ident { $($fname:ident: $fty:ty),* $(,)? }, $lfname:ident) => {
+        protocol_data_struct!($name {
+            $(
+                $fname:$fty,
+            )*
+        });
 
-        impl $crate::network::protocol::Protocol for $name {
-            fn len(&self) -> usize {
-                0 $(+ (self.$fname).len())*
-            }
-
-            fn write<T: std::io::Write>(&self, _dst: &mut T) -> std::io::Result<()> {
-                $(self.$fname.write(_dst)?;)*
-                Ok(())
-            }
-
-            fn read<T: std::io::Read>(_src: &mut T) -> std::io::Result<$name> {
-                Ok($name { $($fname: <$fty>::read(_src)?,)* })
-            }
-        }
-
-        impl $crate::network::protocol::Packet<$listener> for $name {
-            $(fn handle(&mut self, listener: &mut dyn std::any::Any) -> Option<()> {
+        impl $crate::network::protocol::Packet for $name {
+            fn handle(&mut self, listener: &mut dyn std::any::Any) -> Option<()> {
                 // listener.$lfname(self);
-                let listener = listener.downcast_mut::<StatusPacketListener>()?;
+                let listener = listener.downcast_mut::<$listener>()?;
                 listener.$lfname(self);
                 Some(())
-            })?
+            }
         }
+    };
+    ($name:ident { $($fname:ident: $fty:ty),* $(,)? }) => {
+        protocol_data_struct!($name {
+            $(
+                $fname:$fty,
+            )*
+        });
+
+        impl $crate::network::protocol::Packet for $name {}
     };
 }

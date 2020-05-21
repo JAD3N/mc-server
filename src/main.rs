@@ -1,6 +1,4 @@
 #[macro_use]
-extern crate async_trait;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
@@ -31,7 +29,7 @@ mod minecraft;
 
 use std::error::Error;
 use self::core::Registries;
-use self::server::{ServerSettings, ServerBuilder};
+use self::server::{ServerSettings, ServerContainer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -40,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     events::init();
     minecraft::init();
 
-    let mut server = ServerBuilder::new(
+    let mut server = ServerContainer::new(
         // uses events to create registries
         Registries::new(),
         // uses normal file path to load settings
@@ -60,47 +58,3 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 
 }
-
-use std::sync::{Arc, Mutex};
-
-trait Listener {
-    fn do_stuff(&mut self, connection: &mut Connection);
-}
-
-struct Connection {
-    listener: Arc<Mutex<Box<dyn Listener>>>,
-}
-
-struct ConnectionContainer {
-    connection: Connection,
-}
-
-impl ConnectionContainer {
-    fn do_stuff(&mut self) {
-        let listener = self.connection.listener.clone();
-        listener.lock().unwrap().do_stuff(&mut self.connection);
-    }
-}
-
-// impl Listener for ListenerA {
-//     fn do_Stuff(&mut self, connection: &mut ConnectionInner)
-// }
-
-/*
-
-Region {
-    level: Arc<RwLock<Level>>
-    chunks = ChunkPos[]
-
-    tick() {
-        for all chunks {
-            tick_chunk(chunk_pos);
-        }
-    }
-
-    tick_chunk(chunk_pos) {
-        // get tickable stuff
-        // tick block
-    }
-}
-*/

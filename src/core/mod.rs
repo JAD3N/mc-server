@@ -1,6 +1,6 @@
 #[macro_use]
-mod registry;
-pub use registry::*;
+mod registries;
+pub use registries::*;
 
 #[macro_use]
 mod sound;

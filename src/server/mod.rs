@@ -53,12 +53,12 @@ impl Server {
     }
 }
 
-pub struct ServerBuilder {
+pub struct ServerContainer {
     pub server: Arc<RwLock<Server>>,
     pub listening: Arc<AtomicBool>,
 }
 
-impl ServerBuilder {
+impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
         let server = Arc::new(RwLock::new(Server {
             registries: Arc::new(registries),
@@ -95,9 +95,10 @@ impl ServerBuilder {
 
         let addr = addr.parse()?;
         let listening = self.listening.clone();
+        let server = self.server.clone();
 
         tokio::spawn(async move {
-            let mut listener = Listener::bind(addr).await.unwrap();
+            let mut listener = Listener::bind(server, addr).await.unwrap();
 
             // set listening status to true
             listening.store(true, Ordering::Relaxed);

@@ -1,5 +1,5 @@
-use std::error;
-use std::fmt;
+use std::sync::Arc;
+use std::{fmt, error};
 use regex::Regex;
 
 lazy_static! {
@@ -96,5 +96,62 @@ impl Into<ResourceLocation> for &str {
 impl Into<ResourceLocation> for String {
     fn into(self) -> ResourceLocation {
         ResourceLocation::parse(&self).unwrap()
+    }
+}
+
+#[derive(Debug)]
+pub struct ResourceRegistry<T> {
+    pub keys: Vec<ResourceLocation>,
+    pub values: Vec<Arc<T>>,
+}
+
+impl<T> ResourceRegistry<T> {
+    pub fn new() -> ResourceRegistry<T> {
+        Self {
+            keys: vec![],
+            values: vec![],
+        }
+    }
+
+    pub fn get_value_by_id(&self, id: usize) -> Option<&Arc<T>> {
+        self.values.get(id)
+    }
+
+    pub fn get_value<K: Into<ResourceLocation>>(&self, key: K) -> Option<&Arc<T>> {
+        let key = key.into();
+
+        for (id, vkey) in self.keys.iter().enumerate() {
+            if key.eq(vkey) {
+                return self.values.get(id);
+            }
+        }
+
+        None
+    }
+
+    pub fn register<K: Into<ResourceLocation>>(&mut self, key: K, value: T) -> Arc<T> {
+        let key = key.into();
+
+        if self.keys.contains(&key) {
+            panic!("Cannot re-insert using same key!");
+        } else {
+            let i = self.keys.len();
+            let value = Arc::new(value);
+
+            self.keys.insert(i, key);
+            self.values.insert(i, value.clone());
+
+            value
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.keys.len()
+    }
+}
+
+impl<T: ResourceLocatable> ResourceRegistry<T> {
+    pub fn register_locatable(&mut self, value: T) -> Arc<T> {
+        self.register(value.resource_location().clone(), value)
     }
 }

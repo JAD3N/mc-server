@@ -1,7 +1,7 @@
 mod blocks;
 mod items;
 mod sounds;
-mod protocol;
+pub mod protocol;
 
 pub fn init() {
     blocks::init();

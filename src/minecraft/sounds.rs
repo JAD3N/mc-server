@@ -1,7 +1,7 @@
-use crate::core::{RegisterEvent, Sound};
+use crate::core::{ResourceRegistry, RegisterEvent, Sound};
 
-fn register_sounds(event: &mut RegisterEvent<Sound>) {
-    let registry = &mut event.registry;
+fn register_sounds(event: &mut RegisterEvent<ResourceRegistry<Sound>>) {
+    let registry = &mut event.0;
 
     registry.register_locatable(Sound::new("minecraft:test"));
 }

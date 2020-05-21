@@ -1,6 +1,6 @@
-use std::io::{self, Read, Write};
 use std::fmt;
-use crate::network::protocol::Protocol;
+use bytes::BufMut;
+use crate::network::protocol::{ProtocolData, ProtocolError};
 use crate::chat::component::BoxedComponent;
 use crate::util::ToJsonValue;
 use crate::auth::Profile;
@@ -104,12 +104,22 @@ impl fmt::Display for ServerStatus {
     }
 }
 
-// impl Protocol for ServerStatus {
-//     fn len(&self) -> usize {
-//         Protocol::len(&self.to_string())
-//     }
+impl fmt::Debug for ServerStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = self.to_json()
+            .unwrap_or(serde_json::Value::Null)
+            .to_string();
 
-//     fn write<U: Write>(&self, dst: &mut U) -> io::Result<()> {
-//         self.to_string().write(dst)
-//     }
-// }
+        write!(f, "{}", s)
+    }
+}
+
+impl ProtocolData for ServerStatus {
+    fn len(&self) -> usize {
+        ProtocolData::len(&self.to_string())
+    }
+
+    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> where Self: Sized {
+        self.to_string().write(dst)
+    }
+}
