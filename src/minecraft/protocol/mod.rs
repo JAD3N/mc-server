@@ -7,10 +7,15 @@ use crate::network::protocol::Protocol;
 fn register_protocols(event: &mut RegisterEvent<MappedRegistry<i32, Protocol>>) {
     let protocols = &mut event.0;
 
-    protocols.register(-1, protocol! { id: -1, server: [handshake::IntentionPacket] });
+    protocols.register(-1, protocol! {
+        id: -1,
+        handler: handshake::HandshakePacketHandler,
+        server: [handshake::IntentionPacket],
+    });
 
     protocols.register(1, protocol! {
         id: 1,
+        handler: status::StatusPacketHandler,
         server: [
             status::StatusRequestPacket,
             status::PingRequestPacket,

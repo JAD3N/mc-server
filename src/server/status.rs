@@ -1,6 +1,4 @@
 use std::fmt;
-use bytes::BufMut;
-use crate::network::protocol::{ProtocolData, ProtocolError};
 use crate::chat::component::BoxedComponent;
 use crate::util::ToJsonValue;
 use crate::auth::Profile;
@@ -116,13 +114,12 @@ impl fmt::Debug for ServerStatus {
 
 use crate::network::protocol::{ProtocolLength, ProtocolRead, ProtocolWrite};
 
-impl ProtocolLength<ServerStatus> for ProtocolData<ServerStatus> {
-    fn len(value: &ServerStatus) -> usize {
-        ProtocolData::<String>::len(&value.to_string())
+impl ProtocolLength for ServerStatus {
+    fn len(&self) -> usize {
+        ProtocolLength::len(&self.to_string())
     }
 }
 
-impl ProtocolRead<ServerStatus> for ProtocolData<ServerStatus> {}
+impl ProtocolRead for ServerStatus {}
 
-impl ProtocolWrite<ServerStatus> for ProtocolData<ServerStatus> {
-}
+impl ProtocolWrite for ServerStatus {}

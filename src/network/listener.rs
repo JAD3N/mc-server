@@ -1,7 +1,7 @@
 use crate::server::Server;
 use crate::core::MappedRegistry;
-use super::protocol::{Protocol, PacketListener};
-use super::Connection;
+use super::protocol::Protocol;
+use super::{Connection, Worker};
 use std::net::SocketAddr;
 use std::io;
 use std::sync::{Arc, Mutex};
@@ -29,7 +29,7 @@ impl Listener {
 
     pub async fn listen(&mut self) -> Option<()> {
         loop {
-            let (stream, _) = match self.listener.accept().await {
+            let (stream, addr) = match self.listener.accept().await {
                 Ok(res) => res,
                 Err(e) => {
                     log::info!("Failed to accept connection: {}", e);
@@ -37,16 +37,18 @@ impl Listener {
                 }
             };
 
-            // let connection = Arc::new(Mutex::new(Connection::new()));
-            let mut packet_listener = PacketListener::new(
-                self.protocols.clone(),
-                stream,
-            );
+            info!("Client connected! {}", addr);
 
-            // TODO: Other listener stuff?
+            let mut worker = Worker::new(self.protocols.clone(), stream);
+            let connection = worker.connection();
 
-            // spawn listener task for connection
-            tokio::spawn(async move { packet_listener.listen().await });
+            // spawn worker for listening
+            tokio::spawn(async move {
+                if let Err(e) = worker.listen().await {
+                    info!("Client disconnected: {}", e);
+                }
+            });
+
             tokio::task::yield_now().await;
         }
 

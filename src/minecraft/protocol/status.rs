@@ -1,19 +1,30 @@
 use crate::server::ServerStatus;
-use crate::network::protocol::PacketHandler;
+use crate::network::protocol::ProtocolHandler;
+use crate::network::Connection;
+use tokio::sync::RwLock;
+use std::sync::Arc;
 
-pub struct StatusPacketHandler;
-
-impl PacketHandler for StatusPacketHandler {}
+protocol_handler!(StatusPacketHandler);
 
 impl StatusPacketHandler {
-    pub fn test(&mut self, _packet: &mut StatusRequestPacket) {}
-    pub fn test2(&mut self, _packet: &mut PingRequestPacket) {}
+    pub async fn handle_status_request(&mut self, _packet: &mut StatusRequestPacket) -> Result<(), anyhow::Error> {
+        Ok(())
+    }
+
+    pub async fn handle_ping_request(&mut self, _packet: &mut PingRequestPacket)  -> Result<(), anyhow::Error> {
+        Ok(())
+    }
 }
 
-// // Serverbound
-packet!(StatusPacketHandler, StatusRequestPacket {}, test);
-packet!(StatusPacketHandler, PingRequestPacket { time: u64 }, test2);
+protocol_struct!(StatusRequestPacket {});
+protocol_struct!(PingRequestPacket { time: u64 });
+protocol_struct!(StatusResponsePacket { status: ServerStatus });
+protocol_struct!(PongResponsePacket { time: u64 });
 
-// // Clientbound
-packet!(StatusResponsePacket { status: ServerStatus });
-packet!(PongResponsePacket { time: u64 });
+// Serverbound
+packet!(StatusPacketHandler, StatusRequestPacket, handle_status_request);
+packet!(StatusPacketHandler, PingRequestPacket, handle_ping_request);
+
+// Clientbound
+packet!(StatusResponsePacket);
+packet!(PongResponsePacket);

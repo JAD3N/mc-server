@@ -1,15 +1,19 @@
 #[macro_use]
-mod data;
-
+mod io;
 #[macro_use]
 mod packet;
+#[macro_use]
+mod handler;
 
-pub use data::*;
+pub use io::*;
 pub use packet::*;
+pub use handler::*;
 
-use crate::core::MappedRegistry;
+use super::{Connection, WorkerRequest, protocol::ProtocolHandlerInit};
+use tokio::sync::RwLock;
 use std::sync::Arc;
 use thiserror::Error;
+use flume::Sender;
 
 #[derive(Error, Debug)]
 pub enum ProtocolError {
@@ -28,61 +32,57 @@ pub enum ProtocolError {
 
 pub struct Protocol {
     id: i32,
-    packets: MappedRegistry<PacketDirection, PacketSet>,
+    pub handler: ProtocolHandlerInit,
+    pub server: PacketSet,
+    pub client: PacketSet,
 }
 
 impl Protocol {
     pub const DEFAULT: i32 = -1;
 
-    pub fn new(id: i32) -> Self {
-        Self { id, packets: MappedRegistry::new() }
-    }
-
-    pub fn get(&self, key: PacketDirection) -> Option<&Arc<PacketSet>> {
-        self.packets.get(&key)
-    }
-
-    pub fn register(&mut self, dir: PacketDirection, set: PacketSet) {
-        self.packets.register(dir, set);
+    pub fn new<T: ProtocolHandler>(id: i32) -> Self {
+        Self {
+            id,
+            handler: T::new_box,
+            server: PacketSet::new(),
+            client: PacketSet::new(),
+        }
     }
 }
 
 #[macro_export]
 macro_rules! protocol {
     {
-        id: $id:expr
+        id: $id:expr,
+        handler: $handler:ty
         $(, server: [$($sp:ty),* $(,)?] $(,)?)?
         $(, client: [$($cp:ty),* $(,)?] $(,)?)?
     } => {
         {
-            use $crate::network::protocol::{ProtocolData, ProtocolRead, ProtocolWrite, PacketSet, PacketDirection};
+            use $crate::network::protocol::{ProtocolRead, ProtocolWrite, PacketSet};
 
-            let mut protocol = Protocol::new($id);
+            let mut protocol = Protocol::new::<$handler>($id);
 
             $({
-                let mut packets = PacketSet::new();
-                $(packets.add::<$sp>(
-                    |src| PacketSet::wrap(ProtocolData::<$sp>::read(src)),
+                $(protocol.server.add::<$sp>(
+                    |src| PacketSet::wrap(<$sp>::read(src)),
                     |packet, dst| {
                         let packet = packet.downcast_ref::<$sp>().unwrap();
-                        ProtocolData::<$sp>::write(&packet, dst);
+                        packet.write(dst);
                         Ok(())
                     },
                 );)*
-                protocol.register(PacketDirection::Server, packets);
             })?
 
             $({
-                let mut packets = PacketSet::new();
-                $(packets.add::<$cp>(
-                    |src| PacketSet::wrap(ProtocolData::<$cp>::read(src)),
+                $(protocol.client.add::<$cp>(
+                    |src| PacketSet::wrap(<$cp>::read(src)),
                     |packet, dst| {
                         let packet = packet.downcast_ref::<$cp>().unwrap();
-                        ProtocolData::<$cp>::write(&packet, dst);
+                        packet.write(dst);
                         Ok(())
                     },
                 );)*
-                protocol.register(PacketDirection::Client, packets);
             })?
 
             protocol

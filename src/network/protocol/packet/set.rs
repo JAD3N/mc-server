@@ -1,9 +1,8 @@
 use crate::network::protocol::ProtocolError;
-use super::{Packet, PacketListener, PacketDirection};
+use super::{Packet, PacketPayload};
 use std::collections::HashMap;
 use std::any::{TypeId};
 use std::io::Cursor;
-use mopa::Any;
 use bytes::BytesMut;
 
 type PacketReadInit = fn(&mut Cursor<&[u8]>) -> Result<Box<dyn Packet>, ProtocolError>;
@@ -24,10 +23,10 @@ impl PacketSet {
         }
     }
 
-    pub fn read_packet(&self, id: usize, src: &mut Cursor<&[u8]>) -> Option<Box<dyn Packet>> {
+    pub fn read_packet(&self, id: usize, cursor: &mut Cursor<&[u8]>) -> Option<Box<dyn Packet>> {
         match self.id_read_map.get(&id) {
             Some(packet_init) => {
-                match packet_init(src) {
+                match packet_init(cursor) {
                     Ok(packet) => Some(packet),
                     Err(err) => {
                         error!("Error reading packet: {}", err);
@@ -39,10 +38,10 @@ impl PacketSet {
         }
     }
 
-    pub fn write_packet(&self, id: usize, packet: &Box<dyn Packet>, dst: &mut BytesMut) -> Option<()> {
-        match self.id_write_map.get(&id) {
+    pub fn write_packet(&self, payload: &PacketPayload, dst: &mut BytesMut) -> Option<()> {
+        match self.id_write_map.get(&payload.0) {
             Some(packet_init) => {
-                match packet_init(packet, dst) {
+                match packet_init(&payload.1, dst) {
                     Ok(packet) => Some(packet),
                     Err(err) => {
                         error!("Error reading packet: {}", err);
