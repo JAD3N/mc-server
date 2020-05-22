@@ -11,3 +11,13 @@ impl Connection {
         // packet.handle(&mut self.listener);
     }
 }
+
+// from listener to connection?
+enum ServerMessage {
+
+}
+
+// from connection to listener
+enum ConnectionMessage {
+
+}

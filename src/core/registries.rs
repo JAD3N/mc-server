@@ -34,6 +34,9 @@ fn init_protocols() -> Arc<MappedRegistry<i32, Protocol>> {
     // send event to protocols
     dispatch_event!("main", &mut event);
 
+    // log completion
+    info!("registries -> Loaded protocols: {}", event.0.len());
+
     Arc::new(event.0)
 }
 
@@ -71,5 +74,9 @@ impl<K: Eq + Hash, V> MappedRegistry<K, V> {
 
     pub fn values(&self) -> Vec<&Arc<V>> {
         self.map.values().collect()
+    }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
     }
 }

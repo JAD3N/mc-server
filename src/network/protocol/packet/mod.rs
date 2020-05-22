@@ -10,15 +10,21 @@ pub use set::*;
 pub use listener::*;
 pub use handler::*;
 
-use super::ProtocolData;
 use std::any::Any;
 use std::fmt;
 
-pub trait Packet: ProtocolData + Send + Sync + fmt::Debug {
+pub struct Packet {
+    id: usize,
+    data: Box<dyn PacketData>,
+}
+
+pub trait PacketType: mopa::Any + Send + Sync + fmt::Debug {
     fn handle(&mut self, _listener: &mut dyn Any) -> Option<()> {
         Some(())
     }
 }
+
+mopafy!(PacketType);
 
 #[macro_export]
 macro_rules! packet {
@@ -29,7 +35,7 @@ macro_rules! packet {
             )*
         });
 
-        impl $crate::network::protocol::Packet for $name {
+        impl $crate::network::protocol::PacketType for $name {
             fn handle(&mut self, listener: &mut dyn std::any::Any) -> Option<()> {
                 // listener.$lfname(self);
                 let listener = listener.downcast_mut::<$listener>()?;
@@ -45,6 +51,6 @@ macro_rules! packet {
             )*
         });
 
-        impl $crate::network::protocol::Packet for $name {}
+        impl $crate::network::protocol::PacketType for $name {}
     };
 }

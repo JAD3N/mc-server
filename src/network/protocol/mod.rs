@@ -55,19 +55,33 @@ macro_rules! protocol {
         $(, client: [$($cp:ty),* $(,)?] $(,)?)?
     } => {
         {
-            use $crate::network::protocol::{ProtocolData, PacketSet, PacketDirection};
+            use $crate::network::protocol::{ProtocolData, ProtocolRead, ProtocolWrite, PacketSet, PacketDirection};
 
             let mut protocol = Protocol::new($id);
 
             $({
                 let mut packets = PacketSet::new();
-                $(packets.add::<$sp>(|src| PacketSet::wrap(<$sp>::read(src)));)*
+                $(packets.add::<$sp>(
+                    |src| PacketSet::wrap(ProtocolData::<$sp>::read(src)),
+                    |packet, dst| {
+                        let packet = packet.downcast_ref::<$sp>().unwrap();
+                        ProtocolData::<$sp>::write(&packet, dst);
+                        Ok(())
+                    },
+                );)*
                 protocol.register(PacketDirection::Server, packets);
             })?
 
             $({
                 let mut packets = PacketSet::new();
-                $(packets.add::<$cp>(|src| PacketSet::wrap(<$cp>::read(src)));)*
+                $(packets.add::<$cp>(
+                    |src| PacketSet::wrap(ProtocolData::<$cp>::read(src)),
+                    |packet, dst| {
+                        let packet = packet.downcast_ref::<$cp>().unwrap();
+                        ProtocolData::<$cp>::write(&packet, dst);
+                        Ok(())
+                    },
+                );)*
                 protocol.register(PacketDirection::Client, packets);
             })?
 

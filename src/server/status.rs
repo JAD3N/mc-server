@@ -114,12 +114,15 @@ impl fmt::Debug for ServerStatus {
     }
 }
 
-impl ProtocolData for ServerStatus {
-    fn len(&self) -> usize {
-        ProtocolData::len(&self.to_string())
-    }
+use crate::network::protocol::{ProtocolLength, ProtocolRead, ProtocolWrite};
 
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> where Self: Sized {
-        self.to_string().write(dst)
+impl ProtocolLength<ServerStatus> for ProtocolData<ServerStatus> {
+    fn len(value: &ServerStatus) -> usize {
+        ProtocolData::<String>::len(&value.to_string())
     }
+}
+
+impl ProtocolRead<ServerStatus> for ProtocolData<ServerStatus> {}
+
+impl ProtocolWrite<ServerStatus> for ProtocolData<ServerStatus> {
 }

@@ -1,15 +1,24 @@
 use super::ProtocolError;
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, BytesMut};
+use std::marker::PhantomData;
 
-pub trait ProtocolData {
-    fn len(&self) -> usize;
+pub struct ProtocolData<T> {
+    _marker: PhantomData<T>,
+}
 
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> where Self: Sized {
-        unimplemented!("protocol write not implemented");
-    }
+pub trait ProtocolLength<T> {
+    fn len(value: &T) -> usize;
+}
 
-    fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> where Self: Sized {
+pub trait ProtocolRead<T> {
+    fn read<U: Buf>(src: &mut U) -> Result<T, ProtocolError> {
         unimplemented!("protocol read not implemented");
+    }
+}
+
+pub trait ProtocolWrite<T> {
+    fn write<U: BufMut>(value: &T, dst: &mut U) -> Result<(), ProtocolError> {
+        unimplemented!("protocol write not implemented");
     }
 }
 
@@ -21,18 +30,22 @@ macro_rules! protocol_data_struct {
             $(pub $fname: $fty),*
         }
 
-        impl $crate::network::protocol::ProtocolData for $name {
-            fn len(&self) -> usize {
-                0 $(+ (self.$fname).len())*
+        impl $crate::network::protocol::ProtocolLength<$name> for $crate::network::protocol::ProtocolData<$name> {
+            fn len(_value: &$name) -> usize {
+                0 $(+ $crate::network::protocol::ProtocolData::<$fty>::len(&_value.$fname))*
             }
+        }
 
-            fn write<T: bytes::BufMut>(&self, _dst: &mut T) -> Result<(), $crate::network::protocol::ProtocolError> {
-                $(self.$fname.write(_dst)?;)*
+        impl $crate::network::protocol::ProtocolRead<$name> for $crate::network::protocol::ProtocolData<$name> {
+            fn read<U: bytes::Buf>(_src: &mut U) -> Result<$name, $crate::network::protocol::ProtocolError> {
+                Ok($name { $($fname: $crate::network::protocol::ProtocolData::<$fty>::read(_src)?,)* })
+            }
+        }
+
+        impl $crate::network::protocol::ProtocolWrite<$name> for $crate::network::protocol::ProtocolData<$name> {
+            fn write<U: bytes::BufMut>(_value: &$name, _dst: &mut U) -> Result<(), $crate::network::protocol::ProtocolError> {
+                $($crate::network::protocol::ProtocolData::<$fty>::write(&_value.$fname, _dst)?;)*
                 Ok(())
-            }
-
-            fn read<T: bytes::Buf>(_src: &mut T) -> Result<Self, $crate::network::protocol::ProtocolError> {
-                Ok($name { $($fname: <$fty>::read(_src)?,)* })
             }
         }
     };
@@ -40,22 +53,27 @@ macro_rules! protocol_data_struct {
 
 macro_rules! protocol_data_scalar {
     ($t:ty, $len:expr, $w:ident, $r:ident) => {
-        impl ProtocolData for $t {
-            fn len(&self) -> usize { $len }
+        impl ProtocolLength<$t> for ProtocolData<$t> {
+            fn len(value: &$t) -> usize { $len }
+        }
 
-            fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> {
-                if dst.remaining_mut() < $len {
-                    Err(ProtocolError::NotEnoughBytes)
-                } else {
-                    Ok(dst.$w(*self))
-                }
-            }
-
-            fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> {
+        impl ProtocolRead<$t> for ProtocolData<$t> {
+            fn read<U: Buf>(src: &mut U) -> Result<$t, ProtocolError> {
                 if src.remaining() < $len {
                     Err(ProtocolError::NotEnoughBytes)
                 } else {
                     Ok(src.$r())
+                }
+            }
+        }
+
+        impl ProtocolWrite<$t> for ProtocolData<$t> {
+            fn write<U: BufMut>(value: &$t, dst: &mut U) -> Result<(), ProtocolError> {
+                if dst.remaining_mut() < $len {
+                    Err(ProtocolError::NotEnoughBytes)
+                } else {
+                    dst.$w(*value);
+                    Ok(())
                 }
             }
         }
@@ -75,17 +93,13 @@ protocol_data_scalar!(i64, 8, put_i64, get_i64);
 protocol_data_scalar!(f32, 4, put_f32, get_f32);
 protocol_data_scalar!(f64, 8, put_f64, get_f64);
 
-impl ProtocolData for bool {
-    fn len(&self) -> usize {
-        1
-    }
+impl ProtocolLength<bool>for ProtocolData<bool> {
+    fn len(value: &bool) -> usize { 1 }
+}
 
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> {
-        u8::write(&(*self as u8), dst)
-    }
-
-    fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> {
-        let value = u8::read(src)?;
+impl ProtocolRead<bool> for ProtocolData<bool> {
+    fn read<U: Buf>(src: &mut U) -> Result<bool, ProtocolError> {
+        let value = ProtocolData::<u8>::read(src)?;
 
         if value > 1 {
             Err(ProtocolError::Invalid)
@@ -95,14 +109,32 @@ impl ProtocolData for bool {
     }
 }
 
+impl ProtocolWrite<bool> for ProtocolData<bool> {
+    fn write<U: BufMut>(value: &bool, dst: &mut U) -> Result<(), ProtocolError> {
+        ProtocolData::<u8>::write(&(*value as u8), dst)
+    }
+}
+
 #[derive(Debug)]
 pub struct Var<T>(pub T);
 pub type VarInt = Var<i32>;
 pub type VarLong = Var<i64>;
 
-impl ProtocolData for Var<i32> {
-    fn len(&self) -> usize {
-        let mut value = self.0;
+impl<T: Into<i32>> From<T> for Var<i32> {
+    fn from(value: T) -> Self {
+        Var(value.into())
+    }
+}
+
+impl<T: Into<i64>> From<T> for Var<i64> {
+    fn from(value: T) -> Self {
+        Var(value.into())
+    }
+}
+
+impl ProtocolLength<Var<i32>> for ProtocolData<Var<i32>> {
+    fn len(value: &Var<i32>) -> usize {
+        let mut value = value.0;
 
         for i in 1..5 {
             value >>= 7;
@@ -114,41 +146,16 @@ impl ProtocolData for Var<i32> {
 
         5
     }
+}
 
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> {
-        // do remaining check beforehand
-        if dst.remaining_mut() < self.len() {
-            Err(ProtocolError::NotEnoughBytes)
-        } else {
-            let mut value = self.0;
-
-            loop {
-                let mut byte = (value & 0b01111111) as u8;
-
-                value >>= 7;
-
-                if value != 0 {
-                    byte |= 0b10000000;
-                }
-
-                dst.put_u8(byte);
-
-                if value == 0 {
-                    break;
-                }
-            }
-
-            Ok(())
-        }
-    }
-
-    fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> {
+impl ProtocolRead<Var<i32>> for ProtocolData<Var<i32>> {
+    fn read<U: Buf>(src: &mut U) -> Result<Var<i32>, ProtocolError> {
         let mut value = 0i32;
         let mut reads = 0usize;
 
         loop {
             // do remaining check in u8
-            let byte = u8::read(src)? as i32;
+            let byte = ProtocolData::<u8>::read(src)? as i32;
 
             value |= (byte & 0b01111111) << (7 * reads);
             reads += 1;
@@ -163,37 +170,17 @@ impl ProtocolData for Var<i32> {
             }
         }
 
-        Ok(Self(value))
+        Ok(Var(value))
     }
 }
 
-impl<T: Into<i32>> From<T> for Var<i32> {
-    fn from(value: T) -> Self {
-        Var(value.into())
-    }
-}
-
-impl ProtocolData for Var<i64> {
-    fn len(&self) -> usize {
-        let mut value = self.0;
-
-        for i in 1..10 {
-            value >>= 7;
-
-            if value == 0 {
-                return i;
-            }
-        }
-
-        10
-    }
-
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> {
+impl ProtocolWrite<Var<i32>> for ProtocolData<Var<i32>> {
+    fn write<U: BufMut>(value: &Var<i32>, dst: &mut U) -> Result<(), ProtocolError> {
         // do remaining check beforehand
-        if dst.remaining_mut() < self.len() {
+        if dst.remaining_mut() < ProtocolData::<Var<i32>>::len(&value) {
             Err(ProtocolError::NotEnoughBytes)
         } else {
-            let mut value = self.0;
+            let mut value = value.0;
 
             loop {
                 let mut byte = (value & 0b01111111) as u8;
@@ -214,14 +201,32 @@ impl ProtocolData for Var<i64> {
             Ok(())
         }
     }
+}
 
-    fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> {
+impl ProtocolLength<Var<i64>> for ProtocolData<Var<i64>> {
+    fn len(value: &Var<i64>) -> usize {
+        let mut value = value.0;
+
+        for i in 1..10 {
+            value >>= 7;
+
+            if value == 0 {
+                return i;
+            }
+        }
+
+        5
+    }
+}
+
+impl ProtocolRead<Var<i64>> for ProtocolData<Var<i64>> {
+    fn read<U: Buf>(src: &mut U) -> Result<Var<i64>, ProtocolError> {
         let mut value = 0i64;
         let mut reads = 0usize;
 
         loop {
             // do remaining check in u8
-            let byte = u8::read(src)? as i64;
+            let byte = ProtocolData::<u8>::read(src)? as i64;
 
             value |= (byte & 0b01111111) << (7 * reads);
             reads += 1;
@@ -236,44 +241,51 @@ impl ProtocolData for Var<i64> {
             }
         }
 
-        Ok(Self(value))
+        Ok(Var(value))
     }
 }
 
-impl<T: Into<i64>> From<T> for Var<i64> {
-    fn from(value: T) -> Self {
-        Var(value.into())
-    }
-}
-
-
-impl ProtocolData for String {
-    fn len(&self) -> usize {
-        let len = self.len();
-        let len_var: Var<i32> = (len as i32).into();
-
-        len_var.len() + len
-    }
-
-    fn write<T: BufMut>(&self, dst: &mut T) -> Result<(), ProtocolError> {
-        let len = self.len();
-        let len_var: Var<i32> = (len as i32).into();
-
-        if len > 32767 {
-            Err(ProtocolError::TooLarge)
+impl ProtocolWrite<Var<i64>> for ProtocolData<Var<i64>> {
+    fn write<U: BufMut>(value: &Var<i64>, dst: &mut U) -> Result<(), ProtocolError> {
+        // do remaining check beforehand
+        if dst.remaining_mut() < ProtocolData::<Var<i64>>::len(&value) {
+            Err(ProtocolError::NotEnoughBytes)
         } else {
-            len_var.write(dst)?;
+            let mut value = value.0;
 
-            for &byte in self.as_bytes() {
+            loop {
+                let mut byte = (value & 0b01111111) as u8;
+
+                value >>= 7;
+
+                if value != 0 {
+                    byte |= 0b10000000;
+                }
+
                 dst.put_u8(byte);
+
+                if value == 0 {
+                    break;
+                }
             }
 
             Ok(())
         }
     }
+}
 
-    fn read<T: Buf>(src: &mut T) -> Result<Self, ProtocolError> {
-        let len_var = Var::<i32>::read(src)?;
+impl ProtocolLength<String> for ProtocolData<String> {
+    fn len(value: &String) -> usize {
+        let len = value.len();
+        let len_var: Var<i32> = (len as i32).into();
+
+        ProtocolData::<Var<i32>>::len(&len_var) + len
+    }
+}
+
+impl ProtocolRead<String> for ProtocolData<String> {
+    fn read<U: Buf>(src: &mut U) -> Result<String, ProtocolError> {
+        let len_var = ProtocolData::<Var<i32>>::read(src)?;
         let len = len_var.0 as usize;
 
         if len > 32767 {
@@ -287,6 +299,25 @@ impl ProtocolData for String {
             // convert bytes to string
             String::from_utf8(bytes)
                 .map_err(|_| ProtocolError::Invalid)
+        }
+    }
+}
+
+impl ProtocolWrite<String> for ProtocolData<String> {
+    fn write<U: BufMut>(value: &String, dst: &mut U) -> Result<(), ProtocolError> {
+        let len = value.len();
+        let len_var: Var<i32> = (len as i32).into();
+
+        if len > 32767 {
+            Err(ProtocolError::TooLarge)
+        } else {
+            ProtocolData::<Var<i32>>::write(&len_var, dst)?;
+
+            for &byte in value.as_bytes() {
+                dst.put_u8(byte);
+            }
+
+            Ok(())
         }
     }
 }

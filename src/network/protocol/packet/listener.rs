@@ -1,6 +1,6 @@
 use crate::core::MappedRegistry;
 use crate::network::{Connection, protocol::Protocol};
-use super::{PacketCodec, Packet};
+use super::{PacketsCodec, Packet};
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use flume::{Sender, Receiver};
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use futures::{StreamExt, future::Either};
 
 pub struct PacketListener {
-    framed: Framed<TcpStream, PacketCodec>,
+    framed: Framed<TcpStream, PacketsCodec>,
     tx: Sender<Box<dyn Packet>>,
     rx: Arc<Mutex<Receiver<Box<dyn Packet>>>>,
 }
@@ -19,7 +19,7 @@ impl PacketListener {
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
-        let codec = PacketCodec::new(protocols);
+        let codec = PacketsCodec::new(protocols);
         let framed = Framed::new(stream, codec);
 
         let (tx, rx) = flume::unbounded();
