@@ -9,11 +9,8 @@ pub use io::*;
 pub use packet::*;
 pub use handler::*;
 
-use super::{Connection, WorkerRequest, protocol::ProtocolHandlerInit};
-use tokio::sync::RwLock;
-use std::sync::Arc;
+use super::protocol::ProtocolHandlerInit;
 use thiserror::Error;
-use flume::Sender;
 
 #[derive(Error, Debug)]
 pub enum ProtocolError {
@@ -31,7 +28,7 @@ pub enum ProtocolError {
 }
 
 pub struct Protocol {
-    id: i32,
+    pub id: i32,
     pub handler: ProtocolHandlerInit,
     pub server: PacketSet,
     pub client: PacketSet,
@@ -67,9 +64,9 @@ macro_rules! protocol {
                 $(protocol.server.add::<$sp>(
                     |src| PacketSet::wrap(<$sp>::read(src)),
                     |packet, dst| {
-                        let packet = packet.downcast_ref::<$sp>().unwrap();
-                        packet.write(dst);
-                        Ok(())
+                        packet.downcast_ref::<$sp>()
+                            .unwrap()
+                            .write(dst)
                     },
                 );)*
             })?
@@ -78,9 +75,9 @@ macro_rules! protocol {
                 $(protocol.client.add::<$cp>(
                     |src| PacketSet::wrap(<$cp>::read(src)),
                     |packet, dst| {
-                        let packet = packet.downcast_ref::<$cp>().unwrap();
-                        packet.write(dst);
-                        Ok(())
+                        packet.downcast_ref::<$cp>()
+                            .unwrap()
+                            .write(dst)
                     },
                 );)*
             })?

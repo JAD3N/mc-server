@@ -5,5 +5,5 @@ pub use section::*;
 pub use store::*;
 
 pub struct Chunk {
-    sections: [ChunkSection; 16],
+    _sections: [ChunkSection; 16],
 }

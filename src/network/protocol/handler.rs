@@ -1,6 +1,6 @@
 use crate::server::Server;
 use crate::network::{Connection, WorkerRequest};
-use super::{Protocol, Packet, PacketPayload};
+use super::{Protocol, Packet};
 use tokio::sync::RwLock;
 use std::sync::Arc;
 use flume::Sender;
@@ -61,7 +61,8 @@ macro_rules! protocol_handler {
                 )?, packet.into_box());
 
                 // send payload to worker
-                self.worker_tx.send($crate::network::WorkerRequest::SendPacket(payload));
+                self.worker_tx.send($crate::network::WorkerRequest::SendPacket(payload))
+                    .map_err(|_| anyhow::anyhow!("failed to send payload"))?;
 
                 Ok(())
             }

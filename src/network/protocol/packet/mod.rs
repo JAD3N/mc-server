@@ -8,7 +8,6 @@ pub use set::*;
 
 use super::{ProtocolHandler, ProtocolRead, ProtocolWrite};
 use async_trait::async_trait;
-use futures::{future, Future};
 use std::fmt;
 
 #[async_trait]

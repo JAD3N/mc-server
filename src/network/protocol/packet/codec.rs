@@ -1,7 +1,7 @@
 use crate::network::protocol::*;
-use bytes::{Buf, BufMut, BytesMut,};
+use bytes::{Buf, BytesMut,};
 use tokio_util::codec::{Decoder, Encoder};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::io::Cursor;
 
 pub struct PacketsCodec {

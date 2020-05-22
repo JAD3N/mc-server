@@ -1,9 +1,6 @@
 use crate::chat::component::TextComponent;
 use crate::server::*;
 use crate::network::protocol::ProtocolHandler;
-use crate::network::Connection;
-use tokio::sync::RwLock;
-use std::sync::Arc;
 
 protocol_handler!(StatusPacketHandler);
 

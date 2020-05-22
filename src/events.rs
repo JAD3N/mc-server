@@ -1,4 +1,4 @@
-use event_bus::{Event, EventBus};
+use event_bus::EventBus;
 use std::sync::Mutex;
 
 lazy_static! {

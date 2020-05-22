@@ -6,13 +6,13 @@ pub trait ProtocolLength {
 }
 
 pub trait ProtocolRead: ProtocolLength {
-    fn read<U: Buf>(src: &mut U) -> Result<Self, ProtocolError> where Self: Sized {
+    fn read<U: Buf>(_src: &mut U) -> Result<Self, ProtocolError> where Self: Sized {
         unimplemented!("protocol read not implemented");
     }
 }
 
 pub trait ProtocolWrite: ProtocolLength {
-    fn write<U: BufMut>(&self, dst: &mut U) -> Result<(), ProtocolError> where Self: Sized {
+    fn write<U: BufMut>(&self, _dst: &mut U) -> Result<(), ProtocolError> where Self: Sized {
         unimplemented!("protocol write not implemented");
     }
 }

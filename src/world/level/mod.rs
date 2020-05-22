@@ -10,7 +10,6 @@ pub use block::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::server::Server;
-use self::chunk::ChunkStore;
 
 pub struct Level {
     pub server: Arc<RwLock<Server>>,
@@ -20,7 +19,7 @@ pub struct Level {
 
 impl Level {
     pub async fn tick(&mut self) {
-        let server = self.server.write();
+        let _server = self.server.write();
         info!("got server!");
     }
 }

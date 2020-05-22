@@ -54,7 +54,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("ticky took {}", time_end - time_start);
 
     loop {}
-
-    Ok(())
-
 }

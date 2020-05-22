@@ -1,10 +1,10 @@
 use crate::server::Server;
 use crate::core::MappedRegistry;
 use super::protocol::Protocol;
-use super::{Connection, Worker};
+use super::Worker;
 use std::net::SocketAddr;
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::net::TcpListener;
 
@@ -45,7 +45,7 @@ impl Listener {
                 stream,
             );
 
-            let connection = worker.connection();
+            let _connection = worker.connection();
             // store connection in server?
 
             // spawn worker for listening
@@ -57,7 +57,5 @@ impl Listener {
 
             tokio::task::yield_now().await;
         }
-
-        Some(())
     }
 }
