@@ -11,11 +11,11 @@ impl StatusPacketHandler {
         let mut status = ServerStatus::new();
 
         status.version = Some(ServerStatusVersion {
-            name: String::from("1.15.2"),
-            protocol: 578,
+            name: String::from("§2ur gay"),
+            protocol: 1000,
         });
 
-        status.description = Some(TextComponent::from_str("Ta dah!").into());
+        status.description = Some(TextComponent::from_str("§cTa dah!").into());
 
         status.players = Some(ServerStatusPlayers {
             max_players: 1337,
