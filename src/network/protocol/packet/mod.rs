@@ -16,6 +16,10 @@ pub trait Packet: mopa::Any + ProtocolRead + ProtocolWrite + Send + Sync + fmt::
     async fn handle(&mut self, _handler: &mut Box<dyn ProtocolHandler>) -> Result<(), anyhow::Error> {
         Ok(())
     }
+
+    fn into_box(self) -> Box<dyn Packet> where Self: Sized {
+        Box::new(self)
+    }
 }
 
 pub type PacketPayload = (usize, Box<dyn Packet>);

@@ -1,4 +1,5 @@
-use crate::server::ServerStatus;
+use crate::chat::component::TextComponent;
+use crate::server::*;
 use crate::network::protocol::ProtocolHandler;
 use crate::network::Connection;
 use tokio::sync::RwLock;
@@ -8,10 +9,29 @@ protocol_handler!(StatusPacketHandler);
 
 impl StatusPacketHandler {
     pub async fn handle_status_request(&mut self, _packet: &mut StatusRequestPacket) -> Result<(), anyhow::Error> {
+        // self.send_packet(PongResponsePacket { time: 123 });
+
+        let mut status = ServerStatus::new();
+
+        status.version = Some(ServerStatusVersion {
+            name: String::from("1.15.2"),
+            protocol: 578,
+        });
+
+        status.description = Some(TextComponent::from_str("Ta dah!").into());
+
+        status.players = Some(ServerStatusPlayers {
+            max_players: 1337,
+            num_players: 420,
+            sample: vec![],
+        });
+
+        self.send_packet(StatusResponsePacket { status })?;
         Ok(())
     }
 
-    pub async fn handle_ping_request(&mut self, _packet: &mut PingRequestPacket)  -> Result<(), anyhow::Error> {
+    pub async fn handle_ping_request(&mut self, packet: &mut PingRequestPacket)  -> Result<(), anyhow::Error> {
+        self.send_packet(PongResponsePacket { time: packet.time })?;
         Ok(())
     }
 }

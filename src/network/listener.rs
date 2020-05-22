@@ -39,8 +39,14 @@ impl Listener {
 
             info!("Client connected! {}", addr);
 
-            let mut worker = Worker::new(self.protocols.clone(), stream);
+            let mut worker = Worker::new(
+                self.server.clone(),
+                self.protocols.clone(),
+                stream,
+            );
+
             let connection = worker.connection();
+            // store connection in server?
 
             // spawn worker for listening
             tokio::spawn(async move {

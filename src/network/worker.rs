@@ -1,3 +1,4 @@
+use crate::server::Server;
 use crate::core::MappedRegistry;
 use super::Connection;
 use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPayload};
@@ -8,7 +9,6 @@ use std::sync::Arc;
 use flume::{Sender, Receiver};
 use futures::future::{self, Either};
 use futures::{SinkExt, StreamExt};
-use tokio_util::codec::Encoder;
 
 pub enum WorkerRequest {
     SendPacket(PacketPayload),
@@ -17,7 +17,9 @@ pub enum WorkerRequest {
 }
 
 pub struct Worker {
+    server: Arc<RwLock<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
+
     framed: Framed<TcpStream, PacketsCodec>,
     tx: Sender<WorkerRequest>,
     rx: Receiver<WorkerRequest>,
@@ -28,6 +30,7 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(
+        server: Arc<RwLock<Server>>,
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
@@ -40,7 +43,7 @@ impl Worker {
 
         // create connection here
         let connection = Arc::new(RwLock::new(Connection::new(tx.clone())));
-        let mut worker = Self { connection, handler, protocols, framed, tx, rx };
+        let mut worker = Self { server, connection, handler, protocols, framed, tx, rx };
 
         // apply defaults
         worker.set_protocol(Protocol::DEFAULT);
@@ -80,9 +83,10 @@ impl Worker {
             Some(protocol) => {
                 let handler_init = protocol.handler;
                 let handler = handler_init(
+                    self.server.clone(),
                     protocol.clone(),
                     self.tx.clone(),
-                    self.connection.clone(),
+                    self.connection.clone()
                 );
 
                 self.handler = Some(handler);
