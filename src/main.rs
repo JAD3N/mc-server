@@ -27,12 +27,22 @@ mod logger;
 pub mod events;
 mod minecraft;
 
-use std::error::Error;
 use self::core::Registries;
 use self::server::{ServerSettings, ServerContainer};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> anyhow::Result<()> {
+    let is_running = Arc::new(AtomicBool::new(true));
+    let is_running_ref = is_running.clone();
+
+    // add ctrl-c handler for smooth close
+    ctrlc::set_handler(move ||
+        is_running_ref.clone()
+            .store(false, Ordering::SeqCst)
+    ).ok();
+
     // set up
     logger::init();
     events::init();
@@ -45,13 +55,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ServerSettings::load(),
     );
 
-    server.load_levels().await;
+    // run server
+    server.load_levels().await?;
     server.listen("127.0.0.1:25565").await?;
+    server.execute(is_running.clone()).await?;
 
-    let time_start = crate::util::get_nanos();
-    server.tick().await;
-    let time_end = crate::util::get_nanos();
-    info!("ticky took {}", time_end - time_start);
-
-    loop {}
+    Ok(())
 }

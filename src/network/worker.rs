@@ -4,20 +4,21 @@ use super::Connection;
 use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPayload};
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, Mutex};
 use std::sync::Arc;
 use flume::{Sender, Receiver};
 use futures::future::{self, Either};
 use futures::{SinkExt, StreamExt};
 
 pub enum WorkerRequest {
+    Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
     Disconnect,
 }
 
 pub struct Worker {
-    server: Arc<RwLock<Server>>,
+    server: Arc<Mutex<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
 
     framed: Framed<TcpStream, PacketsCodec>,
@@ -30,7 +31,7 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(
-        server: Arc<RwLock<Server>>,
+        server: Arc<Mutex<Server>>,
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
@@ -108,6 +109,11 @@ impl Worker {
 
     async fn handle_request(&mut self, request: WorkerRequest) -> anyhow::Result<()> {
         match request {
+            WorkerRequest::Tick => {
+                if let Some(handler) = self.handler.as_mut() {
+                    handler.tick().await?;
+                }
+            },
             WorkerRequest::SendPacket(packet) => self.framed.send(packet).await?,
             WorkerRequest::SetProtocol(protocol) => self.set_protocol(protocol),
             WorkerRequest::Disconnect => anyhow::bail!("client disconnected"),

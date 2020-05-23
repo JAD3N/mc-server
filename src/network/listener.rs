@@ -5,19 +5,19 @@ use super::Worker;
 use std::net::SocketAddr;
 use std::io;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 use tokio::net::TcpListener;
 
 pub struct Listener {
-    server: Arc<RwLock<Server>>,
+    server: Arc<Mutex<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
     listener: TcpListener,
 }
 
 impl Listener {
-    pub async fn bind(server: Arc<RwLock<Server>>, addr: SocketAddr) -> Result<Self, io::Error> {
+    pub async fn bind(server: Arc<Mutex<Server>>, addr: SocketAddr) -> Result<Self, io::Error> {
         // read protocols from registries
-        let protocols = server.read().await
+        let protocols = server.lock().await
             .registries.protocols.clone();
 
         Ok(Self {
@@ -46,7 +46,6 @@ impl Listener {
             );
 
             let _connection = worker.connection();
-            // store connection in server?
 
             // spawn worker for listening
             tokio::spawn(async move {

@@ -1,114 +1,110 @@
 mod settings;
 mod status;
-mod ticker;
+mod executor;
 
 pub use settings::*;
 pub use status::*;
-pub use ticker::*;
+pub use executor::*;
 
 use crate::core::Registries;
 use crate::world::level::Level;
 use crate::network::Listener;
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::net;
-use tokio::sync::RwLock;
-use futures::future;
+use std::sync::{Arc, atomic::AtomicBool};
+use tokio::sync::Mutex;
 
 pub struct Server {
     pub registries: Arc<Registries>,
     pub settings: Arc<ServerSettings>,
-    pub levels: HashMap<String, Arc<RwLock<Level>>>,
+    pub levels: HashMap<String, Arc<Mutex<Level>>>,
 }
 
 impl Server {
-    pub fn get_level(&self, dimension: &String) -> Option<&Arc<RwLock<Level>>> {
+    pub fn get_level(&self, dimension: &String) -> Option<&Arc<Mutex<Level>>> {
         self.levels.get(dimension)
     }
 
-    pub async fn tick(&mut self) {
-        self.tick_levels().await;
-    }
-
-    pub async fn tick_levels(&mut self) {
-        let mut handles = vec![];
-
-        for level in self.levels.values() {
-            // clone level as reference would be dropped later
-            let level_ref = level.clone();
-            let handle = tokio::spawn(async move {
-                // create lock inside async so the lock isn't dropped
-                let mut level_lock = level_ref.write().await;
-
-                // tick the level and wait for it to finish
-                level_lock.tick().await;
-            });
-
-            handles.push(handle);
-        }
-
-        // wait for all level ticks to finish
-        future::join_all(handles).await;
+    pub async fn tick(&mut self) -> anyhow::Result<()> {
+        info!("did server tick!");
+        Ok(())
     }
 }
 
 pub struct ServerContainer {
-    pub server: Arc<RwLock<Server>>,
-    pub listening: Arc<AtomicBool>,
+    pub server: Arc<Mutex<Server>>,
 }
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
-        let server = Arc::new(RwLock::new(Server {
+        let server = Arc::new(Mutex::new(Server {
             registries: Arc::new(registries),
             settings: Arc::new(settings),
             levels: HashMap::new(),
         }));
 
-        Self { server, listening: Arc::new(AtomicBool::new(false)) }
+        Self { server }
     }
 
-    pub async fn load_levels(&self) {
-        let mut server = self.server.write().await;
+    pub async fn load_levels(&self) -> anyhow::Result<()> {
+        let mut server = self.server.lock().await;
 
         server.levels.insert(
             String::from("level_1"),
-            Arc::new(RwLock::new(Level {
+            Arc::new(Mutex::new(Level {
+                name: String::from("Level 1"),
                 server: self.server.clone(),
             }))
         );
+
+        server.levels.insert(
+            String::from("level_2"),
+            Arc::new(Mutex::new(Level {
+                name: String::from("Level 2"),
+                server: self.server.clone(),
+            }))
+        );
+
+        server.levels.insert(
+            String::from("level_3"),
+            Arc::new(Mutex::new(Level {
+                name: String::from("Level 3"),
+                server: self.server.clone(),
+            }))
+        );
+
+        info!("loaded levels");
+
+        Ok(())
     }
 
-    pub async fn tick(&self) {
-        info!("tick start!");
-        // every tick get lock
-        let mut server = self.server.write().await;
-        server.tick().await;
-        info!("tick end!");
-    }
-
-    pub async fn listen(&mut self, addr: &str) -> Result<(), net::AddrParseError> {
-        if self.listening.load(Ordering::Relaxed) {
-            panic!("Cannot have multiple listeners!");
-        }
-
+    pub async fn listen(&mut self, addr: &str) -> anyhow::Result<()> {
         let addr = addr.parse()?;
-        let listening = self.listening.clone();
         let server = self.server.clone();
 
         tokio::spawn(async move {
-            let mut listener = Listener::bind(server, addr).await.unwrap();
+            // create listener
+            let mut listener = Listener::bind(
+                server,
+                addr,
+            ).await.unwrap();
 
-            // set listening status to true
-            listening.store(true, Ordering::Relaxed);
-
-            // wait till server is finished listening (closed)
+            // wait till done
             listener.listen().await;
-
-            // set listening status to false
-            listening.store(true, Ordering::Relaxed);
         });
+
+        Ok(())
+    }
+
+    pub async fn execute(&mut self, is_running: Arc<AtomicBool>) -> anyhow::Result<()> {
+        // create new executor
+        let mut executor = ServerExecutor::new(is_running, self.server.clone());
+
+        loop {
+            executor.execute().await?;
+            if !executor.wait().await {
+                break;
+            }
+        }
 
         Ok(())
     }
