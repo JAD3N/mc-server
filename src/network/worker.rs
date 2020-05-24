@@ -14,7 +14,7 @@ pub enum WorkerRequest {
     Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
-    Disconnect,
+    Disconnect(String),
 }
 
 pub struct Worker {
@@ -65,7 +65,7 @@ impl Worker {
                 Either::Right((packet_res, _)) => {
                     // if future fails, the client has disconnected
                     let packet_res = packet_res.ok_or_else(||
-                        anyhow::anyhow!("client disconnected"),
+                        anyhow::anyhow!("lost connection"),
                     )?;
 
                     // bubble errors to stop worker
@@ -78,8 +78,6 @@ impl Worker {
     }
 
     pub fn set_protocol(&mut self, protocol: i32) {
-        println!("setting protocol: {}", protocol);
-
         let protocol = match self.protocols.get(&protocol) {
             Some(protocol) => {
                 let handler_init = protocol.handler;
@@ -116,7 +114,7 @@ impl Worker {
             },
             WorkerRequest::SendPacket(packet) => self.framed.send(packet).await?,
             WorkerRequest::SetProtocol(protocol) => self.set_protocol(protocol),
-            WorkerRequest::Disconnect => anyhow::bail!("client disconnected"),
+            WorkerRequest::Disconnect(reason) => anyhow::bail!(reason),
         }
 
         Ok(())

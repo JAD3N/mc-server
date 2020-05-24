@@ -8,12 +8,20 @@ pub use executor::*;
 
 use crate::core::Registries;
 use crate::world::level::Level;
-use crate::network::Listener;
+use crate::network::{Listener, Connection};
 use std::collections::HashMap;
 use std::sync::{Arc, atomic::AtomicBool};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
+use flume::{Sender, Receiver};
+
+pub enum ServerRequest {
+    Connected(Arc<RwLock<Connection>>),
+}
 
 pub struct Server {
+    pub tx: Sender<ServerRequest>,
+    pub rx: Receiver<ServerRequest>,
+    pub connections: Vec<Arc<RwLock<Connection>>>,
     pub registries: Arc<Registries>,
     pub settings: Arc<ServerSettings>,
     pub levels: HashMap<String, Arc<Mutex<Level>>>,
@@ -25,7 +33,32 @@ impl Server {
     }
 
     pub async fn tick(&mut self) -> anyhow::Result<()> {
-        info!("did server tick!");
+        // check if any new requests
+        for request in self.rx.try_iter() {
+            match request {
+                ServerRequest::Connected(connection) => self.connections.push(connection),
+            }
+        }
+
+        let mut disconnected = vec![];
+
+        // update all connections
+        for (i, connection) in self.connections.iter().enumerate() {
+            let mut connection = connection.write().await;
+
+            // tick connection
+            connection.tick();
+
+            if connection.disconnected() {
+                disconnected.push(i);
+            }
+        }
+
+        // remove disconnected clients from list
+        for &i in disconnected.iter().rev() {
+            self.connections.remove(i);
+        }
+
         Ok(())
     }
 }
@@ -36,7 +69,10 @@ pub struct ServerContainer {
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
+        let (tx, rx) = flume::unbounded();
         let server = Arc::new(Mutex::new(Server {
+            tx, rx,
+            connections: vec![],
             registries: Arc::new(registries),
             settings: Arc::new(settings),
             levels: HashMap::new(),
@@ -56,21 +92,21 @@ impl ServerContainer {
             }))
         );
 
-        server.levels.insert(
-            String::from("level_2"),
-            Arc::new(Mutex::new(Level {
-                name: String::from("Level 2"),
-                server: self.server.clone(),
-            }))
-        );
+        // server.levels.insert(
+        //     String::from("level_2"),
+        //     Arc::new(Mutex::new(Level {
+        //         name: String::from("Level 2"),
+        //         server: self.server.clone(),
+        //     }))
+        // );
 
-        server.levels.insert(
-            String::from("level_3"),
-            Arc::new(Mutex::new(Level {
-                name: String::from("Level 3"),
-                server: self.server.clone(),
-            }))
-        );
+        // server.levels.insert(
+        //     String::from("level_3"),
+        //     Arc::new(Mutex::new(Level {
+        //         name: String::from("Level 3"),
+        //         server: self.server.clone(),
+        //     }))
+        // );
 
         info!("loaded levels");
 
@@ -80,16 +116,24 @@ impl ServerContainer {
     pub async fn listen(&mut self, addr: &str) -> anyhow::Result<()> {
         let addr = addr.parse()?;
         let server = self.server.clone();
+        let server_tx = {
+            // wait for server from mutex
+            let server = self.server.lock().await;
+
+            // clone sender
+            server.tx.clone()
+        };
 
         tokio::spawn(async move {
             // create listener
             let mut listener = Listener::bind(
+                server_tx,
                 server,
                 addr,
             ).await.unwrap();
 
             // wait till done
-            listener.listen().await;
+            listener.listen().await.ok();
         });
 
         Ok(())

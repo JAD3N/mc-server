@@ -7,7 +7,7 @@ use super::Server;
 use crate::world::level::Level;
 
 lazy_static! {
-    static ref TICK_RATE: AtomicU32 = AtomicU32::new(20);
+    static ref TICK_RATE: AtomicU32 = AtomicU32::new(1);
     static ref TICK_WARNING_THRESHOLD: AtomicU32 = AtomicU32::new(15_000);
 }
 
@@ -86,6 +86,21 @@ impl ServerExecutor {
 
             server.tick().await?;
         }
+
+        // connections[] = connection;
+
+        // ServerRequest {
+        //     Connected(connection)
+        // }
+
+        // tick() {
+        //     tick connections()
+
+        //     if disconnected {
+        //         remove connection from connections
+        //         remove player entity from world?
+        //     }
+        // }
 
         let mut handles = vec![];
 
