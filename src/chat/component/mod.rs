@@ -4,7 +4,7 @@ pub use text::*;
 use crate::{chat::Style, util::ToJsonValue};
 use std::sync::{Arc, RwLock};
 
-pub type BoxedComponent = Box<dyn Component + Send + Sync>;
+pub type BoxComponent = Box<dyn Component + Send + Sync>;
 
 pub trait Component: mopa::Any + ToJsonValue {
     fn add_extra_json(&self, json: &mut serde_json::Value) {
@@ -32,10 +32,10 @@ pub trait Component: mopa::Any + ToJsonValue {
     fn style(&self) -> &Arc<RwLock<Style>>;
     fn style_mut(&mut self) -> &mut Arc<RwLock<Style>>;
 
-    fn siblings(&self) -> &Vec<BoxedComponent>;
-    fn siblings_mut(&mut self) -> &mut Vec<BoxedComponent>;
+    fn siblings(&self) -> &Vec<BoxComponent>;
+    fn siblings_mut(&mut self) -> &mut Vec<BoxComponent>;
 
-    fn append(&mut self, sibling: BoxedComponent) {
+    fn append(&mut self, sibling: BoxComponent) {
         // adjust child component style
         let mut style = sibling.style()
             .write()
@@ -52,7 +52,7 @@ pub trait Component: mopa::Any + ToJsonValue {
         ""
     }
 
-    fn into_box(self) -> BoxedComponent;
+    fn into_box(self) -> BoxComponent;
 }
 
 mopafy!(Component);

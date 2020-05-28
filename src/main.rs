@@ -31,6 +31,7 @@ use self::core::Registries;
 use self::server::{ServerSettings, ServerContainer};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use tokio::runtime::Runtime;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -55,10 +56,21 @@ async fn main() -> anyhow::Result<()> {
         ServerSettings::load(),
     );
 
-    // run server
+    // try bind port
+    if let Err(e) = server.listen("127.0.0.1:25565").await {
+        error!("Error creating socket: {}", e);
+        return Ok(());
+    }
+
+    // try load world
     server.load_levels().await?;
-    server.listen("127.0.0.1:25565").await?;
-    server.execute(is_running.clone()).await?;
+
+    // create separate runtime for server ticking
+    Runtime::new()?.spawn(async move {
+        if let Err(e) = server.execute(is_running.clone()).await {
+            error!("Fatal error running server executor: {}", e);
+        }
+    }).await?;
 
     Ok(())
 }

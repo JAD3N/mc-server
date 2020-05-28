@@ -1,4 +1,4 @@
-use super::{Style, Component, BoxedComponent};
+use super::{Style, Component, BoxComponent};
 use crate::util::ToJsonValue;
 use std::sync::{Arc, RwLock};
 
@@ -43,8 +43,8 @@ impl ToJsonValue for TextComponent {
     }
 }
 
-impl Into<BoxedComponent> for TextComponent {
-    fn into(self) -> BoxedComponent {
+impl Into<BoxComponent> for TextComponent {
+    fn into(self) -> BoxComponent {
         Box::new(self)
     }
 }
@@ -70,7 +70,7 @@ impl Component for TextComponent {
         &self.text
     }
 
-    fn into_box(self) -> BoxedComponent {
+    fn into_box(self) -> BoxComponent {
         self.into()
     }
 }

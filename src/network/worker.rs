@@ -1,5 +1,7 @@
+use crate::chat::component::BoxComponent;
 use crate::server::Server;
 use crate::core::MappedRegistry;
+use crate::util::ToJsonValue;
 use super::Connection;
 use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPayload};
 use tokio::net::TcpStream;
@@ -14,44 +16,51 @@ pub enum WorkerRequest {
     Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
-    Disconnect(String),
+    Disconnect(BoxComponent),
 }
 
 pub struct Worker {
+    handler: Option<Box<dyn ProtocolHandler>>,
+
     server: Arc<Mutex<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
 
     framed: Framed<TcpStream, PacketsCodec>,
     tx: Sender<WorkerRequest>,
     rx: Receiver<WorkerRequest>,
-
-    connection: Arc<RwLock<Connection>>,
-    handler: Option<Box<dyn ProtocolHandler>>,
 }
 
 impl Worker {
     pub fn new(
+        connection: &mut Connection,
         server: Arc<Mutex<Server>>,
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
-        // set handler to none
         let handler = None;
 
         let codec = PacketsCodec::new();
         let framed = Framed::new(stream, codec);
         let (tx, rx) = flume::unbounded();
 
-        // create connection here
-        let connection = Arc::new(RwLock::new(Connection::new(tx.clone())));
-        let mut worker = Self { server, connection, handler, protocols, framed, tx, rx };
+        connection.attach_worker(tx.clone());
 
-        // apply defaults
+        let mut worker = Self { handler, server, protocols, framed, tx, rx };
         worker.set_protocol(Protocol::DEFAULT);
         worker
     }
 
-    pub async fn listen(&mut self) -> anyhow::Result<()> {
+    pub async fn execute(&mut self) {
+        if let Err(e) = self.listen().await {
+            info!("Client disconnected: {}", e);
+
+            if let Some(handler) = self.handler.as_mut() {
+                handler.handle_disconnect().await;
+            }
+        }
+    }
+
+    async fn listen(&mut self) -> anyhow::Result<()> {
         loop {
             let request = self.rx.next();
             let packet = self.framed.next();
@@ -85,7 +94,6 @@ impl Worker {
                     self.server.clone(),
                     protocol.clone(),
                     self.tx.clone(),
-                    self.connection.clone()
                 );
 
                 self.handler = Some(handler);
@@ -101,10 +109,6 @@ impl Worker {
         self.framed.codec_mut().protocol = protocol;
     }
 
-    pub fn connection(&self) -> &Arc<RwLock<Connection>> {
-        &self.connection
-    }
-
     async fn handle_request(&mut self, request: WorkerRequest) -> anyhow::Result<()> {
         match request {
             WorkerRequest::Tick => {
@@ -114,7 +118,7 @@ impl Worker {
             },
             WorkerRequest::SendPacket(packet) => self.framed.send(packet).await?,
             WorkerRequest::SetProtocol(protocol) => self.set_protocol(protocol),
-            WorkerRequest::Disconnect(reason) => anyhow::bail!(reason),
+            WorkerRequest::Disconnect(reason) => anyhow::bail!("i'm dead!"),
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 use std::fmt;
 use crate::network::protocol::{ProtocolLength, ProtocolRead, ProtocolWrite, ProtocolError};
-use crate::chat::component::BoxedComponent;
+use crate::chat::component::BoxComponent;
 use crate::util::ToJsonValue;
 use crate::auth::Profile;
 
@@ -52,7 +52,7 @@ impl ToJsonValue for ServerStatusPlayers {
 }
 
 pub struct ServerStatus {
-    pub description: Option<BoxedComponent>,
+    pub description: Option<BoxComponent>,
     pub players: Option<ServerStatusPlayers>,
     pub version: Option<ServerStatusVersion>,
     pub favicon: Option<String>,

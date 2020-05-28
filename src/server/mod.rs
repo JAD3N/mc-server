@@ -14,13 +14,7 @@ use std::sync::{Arc, atomic::AtomicBool};
 use tokio::sync::{Mutex, RwLock};
 use flume::{Sender, Receiver};
 
-pub enum ServerRequest {
-    Connected(Arc<RwLock<Connection>>),
-}
-
 pub struct Server {
-    pub tx: Sender<ServerRequest>,
-    pub rx: Receiver<ServerRequest>,
     pub connections: Vec<Arc<RwLock<Connection>>>,
     pub registries: Arc<Registries>,
     pub settings: Arc<ServerSettings>,
@@ -34,30 +28,30 @@ impl Server {
 
     pub async fn tick(&mut self) -> anyhow::Result<()> {
         // check if any new requests
-        for request in self.rx.try_iter() {
-            match request {
-                ServerRequest::Connected(connection) => self.connections.push(connection),
-            }
-        }
+        // for request in self.rx.try_iter() {
+        //     match request {
+        //         ServerRequest::Connected(connection) => self.connections.push(connection),
+        //     }
+        // }
 
-        let mut disconnected = vec![];
+        // let mut disconnected = vec![];
 
-        // update all connections
-        for (i, connection) in self.connections.iter().enumerate() {
-            let mut connection = connection.write().await;
+        // // update all connections
+        // for (i, connection) in self.connections.iter().enumerate() {
+        //     let mut connection = connection.write().await;
 
-            // tick connection
-            connection.tick();
+        //     // tick connection
+        //     connection.tick();
 
-            if connection.disconnected() {
-                disconnected.push(i);
-            }
-        }
+        //     if connection.disconnected() {
+        //         disconnected.push(i);
+        //     }
+        // }
 
-        // remove disconnected clients from list
-        for &i in disconnected.iter().rev() {
-            self.connections.remove(i);
-        }
+        // // remove disconnected clients from list
+        // for &i in disconnected.iter().rev() {
+        //     self.connections.remove(i);
+        // }
 
         Ok(())
     }
@@ -69,9 +63,7 @@ pub struct ServerContainer {
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
-        let (tx, rx) = flume::unbounded();
         let server = Arc::new(Mutex::new(Server {
-            tx, rx,
             connections: vec![],
             registries: Arc::new(registries),
             settings: Arc::new(settings),
@@ -116,23 +108,14 @@ impl ServerContainer {
     pub async fn listen(&mut self, addr: &str) -> anyhow::Result<()> {
         let addr = addr.parse()?;
         let server = self.server.clone();
-        let server_tx = {
-            // wait for server from mutex
-            let server = self.server.lock().await;
 
-            // clone sender
-            server.tx.clone()
-        };
+        // don't move needed for error handling
+        let mut listener = Listener::bind(
+            server,
+            addr,
+        ).await?;
 
         tokio::spawn(async move {
-            // create listener
-            let mut listener = Listener::bind(
-                server_tx,
-                server,
-                addr,
-            ).await.unwrap();
-
-            // wait till done
             listener.listen().await.ok();
         });
 
