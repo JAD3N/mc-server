@@ -10,8 +10,11 @@ use crate::core::Registries;
 use crate::world::level::Level;
 use crate::network::{Listener, Connection};
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::runtime;
+use futures::future;
 use flume::{Sender, Receiver};
 
 pub enum ServerRequest {
@@ -73,24 +76,26 @@ impl Server {
 
 pub struct ServerContainer {
     pub server: Arc<Mutex<Server>>,
+    pub settings: Arc<ServerSettings>,
 }
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
         let (tx, rx) = flume::unbounded();
+        let settings = Arc::new(settings);
         let server = Arc::new(Mutex::new(Server {
             connections: vec![],
             registries: Arc::new(registries),
-            settings: Arc::new(settings),
+            settings: settings.clone(),
             levels: HashMap::new(),
             // listener channel for connections
             tx, rx,
         }));
 
-        Self { server }
+        Self { server, settings }
     }
 
-    pub async fn load_levels(&self) -> anyhow::Result<()> {
+    async fn load_levels(&self) -> anyhow::Result<()> {
         info!("loading levels");
 
         let mut server = self.server.lock().await;
@@ -124,8 +129,7 @@ impl ServerContainer {
         Ok(())
     }
 
-    pub async fn bind(&self, addr: &str) -> anyhow::Result<Listener> {
-        let addr = addr.parse()?;
+    async fn bind(&self, addr: SocketAddr) -> anyhow::Result<Listener> {
         let server = self.server.clone();
         let server_tx = server.lock().await
             .tx.clone();
@@ -140,7 +144,7 @@ impl ServerContainer {
         Ok(listener)
     }
 
-    pub async fn execute(&self) -> anyhow::Result<()> {
+    async fn execute(&self) -> anyhow::Result<()> {
         // create new executor
         let mut executor = ServerExecutor::new(self.server.clone());
 
@@ -148,5 +152,58 @@ impl ServerContainer {
             executor.execute().await?;
             executor.wait().await;
         }
+    }
+
+    pub fn start(&self) -> anyhow::Result<()> {
+        let addr = self.settings.addr().parse::<SocketAddr>()?;
+
+        let mut network_rt = runtime::Builder::new()
+            .thread_name("network")
+            .core_threads(2)
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        let mut server_rt = runtime::Builder::new()
+            .thread_name("server")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
+
+        // Bind:
+        match network_rt.block_on(self.bind(addr)) {
+            Err(e) => error!("Network error: {}", e),
+            Ok(listener) => {
+                let (load_levels, stop_handle_1) = future::abortable(self.load_levels());
+                let (execute, stop_handle_2) = future::abortable(self.execute());
+
+                ctrlc::set_handler(move || {
+                    stop_handle_1.abort();
+                    stop_handle_2.abort();
+                }).ok();
+
+                // Start Up:
+                if let Err(e) = server_rt.block_on(load_levels) {
+                    error!("Fatal error loading levels: {}", e);
+                } else {
+                    // Listen:
+                    network_rt.spawn(listener.listen());
+
+                    // Tick:
+                    server_rt.block_on(execute).ok();
+
+                    // drop network runtime
+                    drop(network_rt);
+
+                    // TODO: Level saves?
+                }
+            }
+        };
+
+        info!("Server shutdown.");
+
+        Ok(())
     }
 }

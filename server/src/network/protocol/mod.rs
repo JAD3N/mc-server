@@ -9,7 +9,6 @@ pub use io::*;
 pub use packet::*;
 pub use handler::*;
 
-use super::protocol::ProtocolHandlerInit;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,6 +25,8 @@ pub enum ProtocolError {
     #[error("unknown protocol error")]
     Unknown,
 }
+
+pub type ProtocolHandlerInit = fn(ProtocolHandlerState) -> Box<dyn ProtocolHandler>;
 
 pub struct Protocol {
     pub id: i32,

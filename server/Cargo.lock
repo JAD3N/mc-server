@@ -423,20 +423,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mc-server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "event-bus",
- "flume",
- "log",
- "server",
- "tokio",
-]
-
-[[package]]
 name = "memchr"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -833,10 +819,13 @@ dependencies = [
  "log",
  "log4rs",
  "mopa",
+ "proc-macro2",
+ "quote",
  "rand",
  "regex",
  "serde",
  "serde_json",
+ "syn",
  "thiserror",
  "tokio",
  "tokio-io-timeout",

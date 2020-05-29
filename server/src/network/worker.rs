@@ -2,7 +2,7 @@ use crate::chat::component::BoxComponent;
 use crate::server::Server;
 use crate::core::MappedRegistry;
 use super::Connection;
-use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPayload};
+use super::protocol::{Protocol, ProtocolHandler, ProtocolHandlerState, PacketsCodec, Packet, PacketPayload};
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use tokio::sync::Mutex;
@@ -97,12 +97,14 @@ impl Worker {
     pub fn set_protocol(&mut self, protocol: i32) {
         let protocol = match self.protocols.get(&protocol) {
             Some(protocol) => {
+                let state = ProtocolHandlerState {
+                    server: self.server.clone(),
+                    protocol: protocol.clone(),
+                    worker_tx: self.tx.clone(),
+                };
+
                 let handler_init = protocol.handler;
-                let handler = handler_init(
-                    self.server.clone(),
-                    protocol.clone(),
-                    self.tx.clone(),
-                );
+                let handler = handler_init(state);
 
                 self.handler = Some(handler);
                 Some(protocol.clone())

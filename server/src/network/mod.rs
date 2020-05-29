@@ -1,6 +1,5 @@
 mod connection;
 mod listener;
-#[macro_use]
 mod worker;
 
 #[macro_use]

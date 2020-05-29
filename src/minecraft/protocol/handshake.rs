@@ -1,9 +1,17 @@
-use crate::network::protocol::{ProtocolHandler, Var};
-use crate::network::WorkerRequest;
+use server::network::protocol::{ProtocolHandler, ProtocolHandlerState, Var};
+use server::network::WorkerRequest;
 
-protocol_handler!(HandshakePacketHandler);
+pub struct HandshakeProtocolHandler {
+    state: ProtocolHandlerState,
+}
 
-impl HandshakePacketHandler {
+impl ProtocolHandler for HandshakeProtocolHandler {
+    fn new(state: ProtocolHandlerState) -> Self {
+        Self { state }
+    }
+}
+
+impl HandshakeProtocolHandler {
     pub async fn handle_intention(&mut self, packet: &mut IntentionPacket) -> Result<(), anyhow::Error> {
         let intention = packet.intention.0;
 
@@ -11,8 +19,8 @@ impl HandshakePacketHandler {
 
         // valid intentions are either 0 or 1
         match intention {
-            0 => self.send(WorkerRequest::SetProtocol(0))?,
-            1 => self.send(WorkerRequest::SetProtocol(1))?,
+            0 => self.state.send(WorkerRequest::SetProtocol(0))?,
+            1 => self.state.send(WorkerRequest::SetProtocol(1))?,
             _ => anyhow::bail!("handshake invalid intention: {}", intention),
         }
 
@@ -28,4 +36,4 @@ protocol_struct!(IntentionPacket {
 });
 
 // Serverbound
-packet!(HandshakePacketHandler, IntentionPacket, handle_intention);
+packet!(HandshakeProtocolHandler, IntentionPacket, handle_intention);

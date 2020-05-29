@@ -1,4 +1,4 @@
-use crate::core::{ResourceRegistry, RegisterEvent, Sound};
+use server::core::{ResourceRegistry, RegisterEvent, Sound};
 
 fn register_sounds(event: &mut RegisterEvent<ResourceRegistry<Sound>>) {
     let registry = &mut event.0;
@@ -7,5 +7,5 @@ fn register_sounds(event: &mut RegisterEvent<ResourceRegistry<Sound>>) {
 }
 
 pub fn init() {
-    subscribe_event!("main", register_sounds);
+    subscribe_event!("main", register_sounds, 1000);
 }

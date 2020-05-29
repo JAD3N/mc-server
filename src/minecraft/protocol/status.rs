@@ -1,10 +1,18 @@
-use crate::chat::component::TextComponent;
-use crate::server::*;
-use crate::network::protocol::ProtocolHandler;
+use server::network::protocol::{ProtocolHandler, ProtocolHandlerState};
+use server::chat::component::TextComponent;
+use server::server::*;
 
-protocol_handler!(StatusPacketHandler);
+pub struct StatusProtocolHandler {
+    state: ProtocolHandlerState,
+}
 
-impl StatusPacketHandler {
+impl ProtocolHandler for StatusProtocolHandler {
+    fn new(state: ProtocolHandlerState) -> Self {
+        Self { state }
+    }
+}
+
+impl StatusProtocolHandler {
     pub async fn handle_status_request(&mut self, _packet: &mut StatusRequestPacket) -> Result<(), anyhow::Error> {
         // self.send_packet(PongResponsePacket { time: 123 });
 
@@ -23,12 +31,12 @@ impl StatusPacketHandler {
             sample: vec![],
         });
 
-        self.send_packet(StatusResponsePacket { status })?;
+        self.state.send_packet(StatusResponsePacket { status })?;
         Ok(())
     }
 
     pub async fn handle_ping_request(&mut self, packet: &mut PingRequestPacket)  -> Result<(), anyhow::Error> {
-        self.send_packet(PongResponsePacket { time: packet.time })?;
+        self.state.send_packet(PongResponsePacket { time: packet.time })?;
         Ok(())
     }
 }
@@ -39,8 +47,8 @@ protocol_struct!(StatusResponsePacket { status: ServerStatus });
 protocol_struct!(PongResponsePacket { time: u64 });
 
 // Serverbound
-packet!(StatusPacketHandler, StatusRequestPacket, handle_status_request);
-packet!(StatusPacketHandler, PingRequestPacket, handle_ping_request);
+packet!(StatusProtocolHandler, StatusRequestPacket, handle_status_request);
+packet!(StatusProtocolHandler, PingRequestPacket, handle_ping_request);
 
 // Clientbound
 packet!(StatusResponsePacket);

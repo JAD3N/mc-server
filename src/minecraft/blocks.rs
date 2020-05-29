@@ -1,5 +1,5 @@
-use crate::core::{ResourceRegistry, RegisterEvent};
-use crate::world::level::{Block, AirBlock};
+use server::core::{ResourceRegistry, RegisterEvent};
+use server::world::level::{Block, AirBlock};
 
 fn register_blocks(event: &mut RegisterEvent<ResourceRegistry<Box<dyn Block>>>) {
     let registry = &mut event.0;
@@ -8,5 +8,5 @@ fn register_blocks(event: &mut RegisterEvent<ResourceRegistry<Box<dyn Block>>>) 
 }
 
 pub fn init() {
-    subscribe_event!("main", register_blocks);
+    subscribe_event!("main", register_blocks, 1000);
 }

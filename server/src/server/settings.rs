@@ -118,6 +118,20 @@ impl ServerSettings {
     pub fn max_tick_time(&self) -> i32 {
         self.max_tick_time
     }
+
+    pub fn addr(&self) -> String {
+        // clean up ip
+        let mut ip = self.server_ip
+            .trim()
+            .to_string();
+
+        // check ip is valid
+        if ip.len() == 0 {
+            ip.push_str("0.0.0.0");
+        }
+
+        format!("{}:{}", ip, self.server_port)
+    }
 }
 
 macro_rules! add_custom_fn {

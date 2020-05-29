@@ -23,14 +23,16 @@ impl Listener {
         addr: SocketAddr,
     ) -> Result<Self, io::Error> {
         // read protocols from registries
-        let protocols = server.lock().await
-            .registries.protocols.clone();
+        let protocols = server.lock().await.registries.protocols.clone();
+        let listener = TcpListener::bind(addr).await?;
+
+        info!("Binded to address: {}", addr);
 
         Ok(Self {
             server_tx,
             server,
             protocols,
-            listener: TcpListener::bind(addr).await?,
+            listener,
         })
     }
 
@@ -39,7 +41,7 @@ impl Listener {
             let (stream, _addr) = match self.listener.accept().await {
                 Ok(res) => res,
                 Err(e) => {
-                    log::info!("Failed to accept connection: {}", e);
+                    info!("Failed to accept connection: {}", e);
                     continue;
                 }
             };
