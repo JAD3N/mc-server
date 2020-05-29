@@ -10,15 +10,21 @@ use crate::core::Registries;
 use crate::world::level::Level;
 use crate::network::{Listener, Connection};
 use std::collections::HashMap;
-use std::sync::{Arc, atomic::AtomicBool};
-use tokio::sync::{Mutex, RwLock};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use flume::{Sender, Receiver};
 
+pub enum ServerRequest {
+    Connected(Connection),
+}
+
 pub struct Server {
-    pub connections: Vec<Arc<RwLock<Connection>>>,
+    pub connections: Vec<Arc<Mutex<Connection>>>,
     pub registries: Arc<Registries>,
     pub settings: Arc<ServerSettings>,
     pub levels: HashMap<String, Arc<Mutex<Level>>>,
+    pub tx: Sender<ServerRequest>,
+    pub rx: Receiver<ServerRequest>,
 }
 
 impl Server {
@@ -27,31 +33,39 @@ impl Server {
     }
 
     pub async fn tick(&mut self) -> anyhow::Result<()> {
-        // check if any new requests
-        // for request in self.rx.try_iter() {
-        //     match request {
-        //         ServerRequest::Connected(connection) => self.connections.push(connection),
-        //     }
-        // }
+        for request in self.rx.try_iter() {
+            match request {
+                ServerRequest::Connected(connection) => {
+                    // check if connection is closed before adding
+                    if !connection.is_connected() {
+                        continue;
+                    }
 
-        // let mut disconnected = vec![];
+                    // wrap connection in arc + mutex
+                    let connection = Arc::new(Mutex::new(connection));
+                    self.connections.push(connection);
+                },
+            }
+        }
+
+        let mut disconnected = vec![];
 
         // // update all connections
-        // for (i, connection) in self.connections.iter().enumerate() {
-        //     let mut connection = connection.write().await;
+        for (i, connection) in self.connections.iter().enumerate() {
+            let mut connection = connection.lock().await;
 
-        //     // tick connection
-        //     connection.tick();
+            // tick connection
+            connection.tick();
 
-        //     if connection.disconnected() {
-        //         disconnected.push(i);
-        //     }
-        // }
+            if !connection.is_connected() {
+                disconnected.push(i);
+            }
+        }
 
-        // // remove disconnected clients from list
-        // for &i in disconnected.iter().rev() {
-        //     self.connections.remove(i);
-        // }
+        // remove disconnected clients from list
+        for &i in disconnected.iter().rev() {
+            self.connections.remove(i);
+        }
 
         Ok(())
     }
@@ -63,17 +77,22 @@ pub struct ServerContainer {
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
+        let (tx, rx) = flume::unbounded();
         let server = Arc::new(Mutex::new(Server {
             connections: vec![],
             registries: Arc::new(registries),
             settings: Arc::new(settings),
             levels: HashMap::new(),
+            // listener channel for connections
+            tx, rx,
         }));
 
         Self { server }
     }
 
     pub async fn load_levels(&self) -> anyhow::Result<()> {
+        info!("loading levels");
+
         let mut server = self.server.lock().await;
 
         server.levels.insert(
@@ -105,34 +124,29 @@ impl ServerContainer {
         Ok(())
     }
 
-    pub async fn listen(&mut self, addr: &str) -> anyhow::Result<()> {
+    pub async fn bind(&self, addr: &str) -> anyhow::Result<Listener> {
         let addr = addr.parse()?;
         let server = self.server.clone();
+        let server_tx = server.lock().await
+            .tx.clone();
 
         // don't move needed for error handling
-        let mut listener = Listener::bind(
+        let listener = Listener::bind(
+            server_tx,
             server,
             addr,
         ).await?;
 
-        tokio::spawn(async move {
-            listener.listen().await.ok();
-        });
-
-        Ok(())
+        Ok(listener)
     }
 
-    pub async fn execute(&mut self, is_running: Arc<AtomicBool>) -> anyhow::Result<()> {
+    pub async fn execute(&self) -> anyhow::Result<()> {
         // create new executor
-        let mut executor = ServerExecutor::new(is_running, self.server.clone());
+        let mut executor = ServerExecutor::new(self.server.clone());
 
         loop {
             executor.execute().await?;
-            if !executor.wait().await {
-                break;
-            }
+            executor.wait().await;
         }
-
-        Ok(())
     }
 }

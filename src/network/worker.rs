@@ -1,12 +1,11 @@
 use crate::chat::component::BoxComponent;
 use crate::server::Server;
 use crate::core::MappedRegistry;
-use crate::util::ToJsonValue;
 use super::Connection;
 use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPayload};
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::Mutex;
 use std::sync::Arc;
 use flume::{Sender, Receiver};
 use futures::future::{self, Either};
@@ -51,11 +50,10 @@ impl Worker {
     }
 
     pub async fn execute(&mut self) {
-        if let Err(e) = self.listen().await {
-            info!("Client disconnected: {}", e);
-
+        if let Err(_) = self.listen().await {
             if let Some(handler) = self.handler.as_mut() {
-                handler.handle_disconnect().await;
+                // ignore handle disconnect error
+                handler.handle_disconnect().await.ok();
             }
         }
     }

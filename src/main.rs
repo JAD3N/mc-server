@@ -17,60 +17,81 @@ pub mod chat;
 pub mod core;
 #[macro_use]
 pub mod network;
+pub mod auth;
 pub mod server;
 pub mod world;
-pub mod auth;
 
 #[macro_use]
 mod macros;
-mod logger;
 pub mod events;
+mod logger;
 mod minecraft;
 
 use self::core::Registries;
-use self::server::{ServerSettings, ServerContainer};
+use self::server::{ServerContainer, ServerSettings};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::runtime::Runtime;
+use tokio::runtime;
+use futures::future;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let is_running = Arc::new(AtomicBool::new(true));
-    let is_running_ref = is_running.clone();
-
-    // add ctrl-c handler for smooth close
-    ctrlc::set_handler(move ||
-        is_running_ref.clone()
-            .store(false, Ordering::SeqCst)
-    ).ok();
-
+fn main() -> anyhow::Result<()> {
     // set up
     logger::init();
     events::init();
     minecraft::init();
 
-    let mut server = ServerContainer::new(
+    let server = Arc::new(ServerContainer::new(
         // uses events to create registries
         Registries::new(),
         // uses normal file path to load settings
         ServerSettings::load(),
-    );
+    ));
 
-    // try bind port
-    if let Err(e) = server.listen("127.0.0.1:25565").await {
-        error!("Error creating socket: {}", e);
-        return Ok(());
-    }
+    let mut network_rt = runtime::Builder::new()
+        .thread_name("network")
+        .core_threads(2)
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .unwrap();
 
-    // try load world
-    server.load_levels().await?;
+    let mut server_rt = runtime::Builder::new()
+        .thread_name("server")
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .unwrap();
 
-    // create separate runtime for server ticking
-    Runtime::new()?.spawn(async move {
-        if let Err(e) = server.execute(is_running.clone()).await {
-            error!("Fatal error running server executor: {}", e);
+    // Bind:
+    match network_rt.block_on(server.bind("127.0.0.1:25565")) {
+        Err(e) => error!("Network error: {}", e),
+        Ok(listener) => {
+            let (load_levels, stop_handle_1) = future::abortable(server.load_levels());
+            let (execute, stop_handle_2) = future::abortable(server.execute());
+
+            ctrlc::set_handler(move || {
+                stop_handle_1.abort();
+                stop_handle_2.abort();
+            }).ok();
+
+            // Start Up:
+            if let Err(e) = server_rt.block_on(load_levels) {
+                error!("Fatal error loading levels: {}", e);
+            } else {
+                // Listen:
+                network_rt.spawn(listener.listen());
+
+                // Tick:
+                server_rt.block_on(execute).ok();
+
+                // drop network runtime
+                drop(network_rt);
+
+                // TODO: Level saves?
+            }
         }
-    }).await?;
+    };
+
+    info!("Server shutdown.");
 
     Ok(())
 }

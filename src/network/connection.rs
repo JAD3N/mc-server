@@ -1,6 +1,5 @@
 use crate::chat::component::BoxComponent;
 use super::{WorkerRequest};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use flume::Sender;
 
 pub struct Connection {
@@ -29,13 +28,21 @@ impl Connection {
         self.worker_tx = Some(worker_tx);
     }
 
-    pub fn send(&self, request: WorkerRequest) {
+    pub fn send(&mut self, request: WorkerRequest) -> bool {
         if !self.is_connected() {
-            return;
+            return false;
         }
 
-        self.worker_tx.as_ref().unwrap()
-            .send(request).ok();
+        // returns whether the request sent
+        if let Err(_) = self.worker_tx.as_ref()
+            .unwrap()
+            .send(request) {
+            self.is_disconnected = true;
+
+            false
+        } else {
+            true
+        }
     }
 
     pub fn tick(&mut self) {

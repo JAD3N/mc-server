@@ -1,8 +1,8 @@
 use crate::server::Server;
 use crate::chat::component::BoxComponent;
-use crate::network::{Connection, WorkerRequest};
+use crate::network::WorkerRequest;
 use super::{Protocol, Packet};
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::Mutex;
 use std::sync::Arc;
 use flume::Sender;
 use async_trait::async_trait;

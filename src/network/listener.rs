@@ -1,4 +1,4 @@
-use crate::server::Server;
+use crate::server::{Server, ServerRequest};
 use crate::core::MappedRegistry;
 use super::protocol::Protocol;
 use super::{Worker, Connection};
@@ -7,16 +7,18 @@ use std::io;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::net::TcpListener;
+use flume::Sender;
 
 pub struct Listener {
+    server_tx: Sender<ServerRequest>,
     server: Arc<Mutex<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
     listener: TcpListener,
-    connections: Vec<Connection>,
 }
 
 impl Listener {
     pub async fn bind(
+        server_tx: Sender<ServerRequest>,
         server: Arc<Mutex<Server>>,
         addr: SocketAddr,
     ) -> Result<Self, io::Error> {
@@ -25,24 +27,22 @@ impl Listener {
             .registries.protocols.clone();
 
         Ok(Self {
+            server_tx,
             server,
             protocols,
             listener: TcpListener::bind(addr).await?,
-            connections: vec![],
         })
     }
 
-    pub async fn listen(&mut self) -> anyhow::Result<()> {
+    pub async fn listen(mut self) -> anyhow::Result<()> {
         loop {
-            let (stream, addr) = match self.listener.accept().await {
+            let (stream, _addr) = match self.listener.accept().await {
                 Ok(res) => res,
                 Err(e) => {
                     log::info!("Failed to accept connection: {}", e);
                     continue;
                 }
             };
-
-            info!("Client connected: {}", addr);
 
             let mut connection = Connection::new();
             let mut worker = Worker::new(
@@ -53,8 +53,8 @@ impl Listener {
             );
 
             // add connection to array
-            self.connections.push(connection);
-
+            self.server_tx.send(ServerRequest::Connected(connection)).ok()
+                .expect("failed to accept connection");
 
             // spawn worker for listening
             tokio::spawn(async move { worker.execute().await });
