@@ -18,6 +18,7 @@ serde_json = "1.0.50"
 mopa = "0.2.2"
 tokio = { version = "0.2", features = ["full"] }
 tokio-util = { version =  "0.3", features = ["codec"] }
+tokio-io-timeout = "0.4"
 event-bus = "0.1"
 colored = "1.9"
 bytes = "0.5"

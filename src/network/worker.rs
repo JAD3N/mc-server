@@ -6,7 +6,9 @@ use super::protocol::{Protocol, ProtocolHandler, PacketsCodec, Packet, PacketPay
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
 use tokio::sync::Mutex;
+use tokio_io_timeout::TimeoutStream;
 use std::sync::Arc;
+use std::time::Duration;
 use flume::{Sender, Receiver};
 use futures::future::{self, Either};
 use futures::{SinkExt, StreamExt};
@@ -24,7 +26,7 @@ pub struct Worker {
     server: Arc<Mutex<Server>>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
 
-    framed: Framed<TcpStream, PacketsCodec>,
+    framed: Framed<TimeoutStream<TcpStream>, PacketsCodec>,
     tx: Sender<WorkerRequest>,
     rx: Receiver<WorkerRequest>,
 }
@@ -36,6 +38,14 @@ impl Worker {
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
+        let mut stream = TimeoutStream::new({
+            stream.set_nodelay(true).ok();
+            stream
+        });
+
+        // add 30 second read timeout
+        stream.set_read_timeout(Some(Duration::from_secs(30)));
+
         let handler = None;
 
         let codec = PacketsCodec::new();
