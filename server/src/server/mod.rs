@@ -7,6 +7,7 @@ pub use status::*;
 pub use executor::*;
 
 use crate::core::Registries;
+use crate::chat::component::TextComponent;
 use crate::world::level::Level;
 use crate::network::{Listener, Connection};
 use std::collections::HashMap;
@@ -17,14 +18,26 @@ use tokio::runtime;
 use futures::future;
 use flume::{Sender, Receiver};
 
+pub static VERSION_NAME: &str = "1.15.2";
+pub static VERSION_STABLE: bool = true;
+pub static WORLD_VERSION: u32 = 2230;
+pub static PROTOCOL_VERSION: u32 = 578;
+pub static PACK_VERSION: u32 = 5;
+pub static RELEASE_TARGET: &str = "1.15.2";
+
 pub enum ServerRequest {
     Connected(Connection),
 }
 
-pub struct Server {
-    pub connections: Vec<Arc<Mutex<Connection>>>,
+pub struct ServerShared {
     pub registries: Arc<Registries>,
     pub settings: Arc<ServerSettings>,
+    pub status: Arc<Mutex<ServerStatus>>,
+}
+
+pub struct Server {
+    pub shared: Arc<ServerShared>,
+    pub connections: Vec<Arc<Mutex<Connection>>>,
     pub levels: HashMap<String, Arc<Mutex<Level>>>,
     pub tx: Sender<ServerRequest>,
     pub rx: Receiver<ServerRequest>,
@@ -76,23 +89,41 @@ impl Server {
 
 pub struct ServerContainer {
     pub server: Arc<Mutex<Server>>,
-    pub settings: Arc<ServerSettings>,
+    pub shared: Arc<ServerShared>,
 }
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
-        let (tx, rx) = flume::unbounded();
-        let settings = Arc::new(settings);
-        let server = Arc::new(Mutex::new(Server {
-            connections: vec![],
+        let status = ServerStatus {
+            description: TextComponent::new(settings.motd()).into(),
+            version: ServerStatusVersion {
+                name: String::from(VERSION_NAME),
+                protocol: PROTOCOL_VERSION,
+            },
+            players: ServerStatusPlayers {
+                max_players: settings.max_players(),
+                num_players: 0,
+                sample: vec![],
+            },
+            // TODO: Load icon from server-icon.png or level icon.png and convert to base64
+            favicon: None,
+        };
+
+        let shared = Arc::new(ServerShared {
             registries: Arc::new(registries),
-            settings: settings.clone(),
+            settings: Arc::new(settings),
+            status: Arc::new(Mutex::new(status)),
+        });
+
+        let (tx, rx) = flume::unbounded();
+        let server = Arc::new(Mutex::new(Server {
+            shared: shared.clone(),
+            connections: vec![],
             levels: HashMap::new(),
-            // listener channel for connections
             tx, rx,
         }));
 
-        Self { server, settings }
+        Self { server, shared }
     }
 
     async fn load_levels(&self) -> anyhow::Result<()> {
@@ -130,6 +161,7 @@ impl ServerContainer {
     }
 
     async fn bind(&self, addr: SocketAddr) -> anyhow::Result<Listener> {
+        let shared = self.shared.clone();
         let server = self.server.clone();
         let server_tx = server.lock().await
             .tx.clone();
@@ -137,7 +169,7 @@ impl ServerContainer {
         // don't move needed for error handling
         let listener = Listener::bind(
             server_tx,
-            server,
+            shared,
             addr,
         ).await?;
 
@@ -155,7 +187,7 @@ impl ServerContainer {
     }
 
     pub fn start(&self) -> anyhow::Result<()> {
-        let addr = self.settings.addr().parse::<SocketAddr>()?;
+        let addr = self.shared.settings.addr().parse::<SocketAddr>()?;
 
         let mut network_rt = runtime::Builder::new()
             .thread_name("network")

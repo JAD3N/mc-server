@@ -2,6 +2,7 @@ use uuid::Uuid;
 use std::error;
 use std::fmt;
 
+#[derive(Clone)]
 pub struct Profile {
     uuid: Option<Uuid>,
     name: Option<String>,

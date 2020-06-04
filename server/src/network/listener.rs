@@ -1,17 +1,16 @@
-use crate::server::{Server, ServerRequest};
+use crate::server::{ServerShared, ServerRequest};
 use crate::core::MappedRegistry;
 use super::protocol::Protocol;
 use super::{Worker, Connection};
 use std::net::SocketAddr;
 use std::io;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tokio::net::TcpListener;
 use flume::Sender;
 
 pub struct Listener {
     server_tx: Sender<ServerRequest>,
-    server: Arc<Mutex<Server>>,
+    shared: Arc<ServerShared>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
     listener: TcpListener,
 }
@@ -19,18 +18,18 @@ pub struct Listener {
 impl Listener {
     pub async fn bind(
         server_tx: Sender<ServerRequest>,
-        server: Arc<Mutex<Server>>,
+        shared: Arc<ServerShared>,
         addr: SocketAddr,
     ) -> Result<Self, io::Error> {
         // read protocols from registries
-        let protocols = server.lock().await.registries.protocols.clone();
+        let protocols = shared.registries.protocols.clone();
         let listener = TcpListener::bind(addr).await?;
 
         info!("Binded to address: {}", addr);
 
         Ok(Self {
             server_tx,
-            server,
+            shared,
             protocols,
             listener,
         })
@@ -49,7 +48,7 @@ impl Listener {
             let mut connection = Connection::new();
             let mut worker = Worker::new(
                 &mut connection,
-                self.server.clone(),
+                self.shared.clone(),
                 self.protocols.clone(),
                 stream,
             );

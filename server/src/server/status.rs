@@ -1,12 +1,13 @@
 use std::fmt;
 use crate::network::protocol::{ProtocolLength, ProtocolRead, ProtocolWrite, ProtocolError};
-use crate::chat::component::BoxComponent;
+use crate::chat::component::ComponentContainer;
 use crate::util::ToJsonValue;
 use crate::auth::Profile;
 
+#[derive(Clone)]
 pub struct ServerStatusVersion {
     pub name: String,
-    pub protocol: i32,
+    pub protocol: u32,
 }
 
 impl ToJsonValue for ServerStatusVersion {
@@ -18,9 +19,10 @@ impl ToJsonValue for ServerStatusVersion {
     }
 }
 
+#[derive(Clone)]
 pub struct ServerStatusPlayers {
-    pub max_players: i32,
-    pub num_players: i32,
+    pub max_players: u32,
+    pub num_players: u32,
     pub sample: Vec<Profile>,
 }
 
@@ -51,39 +53,21 @@ impl ToJsonValue for ServerStatusPlayers {
     }
 }
 
+#[derive(Clone)]
 pub struct ServerStatus {
-    pub description: Option<BoxComponent>,
-    pub players: Option<ServerStatusPlayers>,
-    pub version: Option<ServerStatusVersion>,
+    pub description: ComponentContainer,
+    pub players: ServerStatusPlayers,
+    pub version: ServerStatusVersion,
     pub favicon: Option<String>,
-}
-
-impl ServerStatus {
-    pub fn new() -> Self {
-        Self {
-            description: None,
-            players: None,
-            version: None,
-            favicon: None,
-        }
-    }
 }
 
 impl ToJsonValue for ServerStatus {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({});
 
-        if let Some(description) = &self.description {
-            json["description"] = description.to_json().unwrap();
-        }
-
-        if let Some(players) = &self.players {
-            json["players"] = players.to_json().unwrap();
-        }
-
-        if let Some(version) = &self.version {
-            json["version"] = version.to_json().unwrap();
-        }
+        json["description"] = self.description.to_json().unwrap();
+        json["players"] = self.players.to_json().unwrap();
+        json["version"] = self.version.to_json().unwrap();
 
         if let Some(favicon) = &self.favicon {
             json["favicon"] = json!(favicon);

@@ -1,5 +1,4 @@
 use server::network::protocol::{ProtocolHandler, ProtocolHandlerState};
-use server::chat::component::TextComponent;
 use server::server::*;
 
 pub struct StatusProtocolHandler {
@@ -14,24 +13,12 @@ impl ProtocolHandler for StatusProtocolHandler {
 
 impl StatusProtocolHandler {
     pub async fn handle_status_request(&mut self, _packet: &mut StatusRequestPacket) -> Result<(), anyhow::Error> {
-        // self.send_packet(PongResponsePacket { time: 123 });
+        let status = self.state.shared.status.lock().await;
 
-        let mut status = ServerStatus::new();
+        self.state.send_packet(StatusResponsePacket {
+            status: status.clone(),
+        })?;
 
-        status.version = Some(ServerStatusVersion {
-            name: String::from("§2ur gay"),
-            protocol: 1000,
-        });
-
-        status.description = Some(TextComponent::from_str("§cTa dah!").into());
-
-        status.players = Some(ServerStatusPlayers {
-            max_players: 1337,
-            num_players: 420,
-            sample: vec![],
-        });
-
-        self.state.send_packet(StatusResponsePacket { status })?;
         Ok(())
     }
 

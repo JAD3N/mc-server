@@ -23,6 +23,7 @@ impl ClickEventAction {
     }
 }
 
+#[derive(Clone)]
 pub struct ClickEvent {
     pub action: ClickEventAction,
     pub value: String,

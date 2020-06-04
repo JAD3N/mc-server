@@ -1,4 +1,4 @@
-use crate::chat::component::BoxComponent;
+use crate::chat::component::ComponentContainer;
 use super::{WorkerRequest};
 use flume::Sender;
 
@@ -49,7 +49,7 @@ impl Connection {
         self.send(WorkerRequest::Tick);
     }
 
-    pub fn disconnect(&mut self, reason: BoxComponent) {
+    pub fn disconnect(&mut self, reason: ComponentContainer) {
         self.is_disconnected = true;
         self.send(WorkerRequest::Disconnect(reason));
     }

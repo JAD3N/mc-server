@@ -1,13 +1,15 @@
-use crate::server::Server;
-use crate::chat::component::BoxComponent;
+use crate::server::ServerShared;
+use crate::chat::component::ComponentContainer;
 use crate::network::WorkerRequest;
 use super::{Protocol, Packet};
+use std::sync::Arc;
 use async_trait::async_trait;
+use flume::Sender;
 
 pub struct ProtocolHandlerState {
-    pub server: std::sync::Arc<tokio::sync::Mutex<Server>>,
-    pub protocol: std::sync::Arc<Protocol>,
-    pub worker_tx: flume::Sender<WorkerRequest>,
+    pub shared: Arc<ServerShared>,
+    pub protocol: Arc<Protocol>,
+    pub worker_tx: Sender<WorkerRequest>,
 }
 
 impl ProtocolHandlerState {

@@ -132,6 +132,14 @@ impl ServerSettings {
 
         format!("{}:{}", ip, self.server_port)
     }
+
+    pub fn motd(&self) -> &str {
+        &self.motd
+    }
+
+    pub fn max_players(&self) -> u32 {
+        self.max_players
+    }
 }
 
 macro_rules! add_custom_fn {

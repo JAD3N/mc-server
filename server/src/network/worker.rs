@@ -1,11 +1,10 @@
-use crate::chat::component::BoxComponent;
-use crate::server::Server;
+use crate::chat::component::ComponentContainer;
+use crate::server::ServerShared;
 use crate::core::MappedRegistry;
 use super::Connection;
 use super::protocol::{Protocol, ProtocolHandler, ProtocolHandlerState, PacketsCodec, Packet, PacketPayload};
 use tokio::net::TcpStream;
 use tokio_util::codec::Framed;
-use tokio::sync::Mutex;
 use tokio_io_timeout::TimeoutStream;
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,13 +16,13 @@ pub enum WorkerRequest {
     Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
-    Disconnect(BoxComponent),
+    Disconnect(ComponentContainer),
 }
 
 pub struct Worker {
     handler: Option<Box<dyn ProtocolHandler>>,
 
-    server: Arc<Mutex<Server>>,
+    shared: Arc<ServerShared>,
     protocols: Arc<MappedRegistry<i32, Protocol>>,
 
     framed: Framed<TimeoutStream<TcpStream>, PacketsCodec>,
@@ -34,7 +33,7 @@ pub struct Worker {
 impl Worker {
     pub fn new(
         connection: &mut Connection,
-        server: Arc<Mutex<Server>>,
+        shared: Arc<ServerShared>,
         protocols: Arc<MappedRegistry<i32, Protocol>>,
         stream: TcpStream,
     ) -> Self {
@@ -54,7 +53,7 @@ impl Worker {
 
         connection.attach_worker(tx.clone());
 
-        let mut worker = Self { handler, server, protocols, framed, tx, rx };
+        let mut worker = Self { handler, shared, protocols, framed, tx, rx };
         worker.set_protocol(Protocol::DEFAULT);
         worker
     }
@@ -98,7 +97,7 @@ impl Worker {
         let protocol = match self.protocols.get(&protocol) {
             Some(protocol) => {
                 let state = ProtocolHandlerState {
-                    server: self.server.clone(),
+                    shared: self.shared.clone(),
                     protocol: protocol.clone(),
                     worker_tx: self.tx.clone(),
                 };

@@ -3,16 +3,18 @@ use crate::util::ToJsonValue;
 use super::{Component, ComponentContainer};
 
 #[derive(Clone)]
-pub struct TextComponent {
+pub struct TranslatableComponent {
     style: Style,
     siblings: Vec<ComponentContainer>,
-    text: String,
+    key: String,
+    args: Vec<serde_json::Value>,
 }
 
-impl ToJsonValue for TextComponent {
+impl ToJsonValue for TranslatableComponent {
     fn to_json(&self) -> Option<serde_json::Value> {
         let mut json = json!({
-            "text": &self.text,
+            "key": &self.key,
+            "args": &self.args,
         });
 
         self.append_extra_json(&mut json);
@@ -22,7 +24,7 @@ impl ToJsonValue for TextComponent {
     }
 }
 
-impl Component for TextComponent {
+impl Component for TranslatableComponent {
     fn style(&self) -> &Style {
         &self.style
     }
@@ -40,22 +42,27 @@ impl Component for TextComponent {
     }
 }
 
-impl Into<ComponentContainer> for TextComponent {
+impl Into<ComponentContainer> for TranslatableComponent {
     fn into(self) -> ComponentContainer {
-        ComponentContainer::Text(self)
+        ComponentContainer::Translatable(self)
     }
 }
 
-impl TextComponent {
-    pub fn new<T: Into<String>>(text: T) -> Self {
-        Self::new_with_style(text, Style::default())
+impl TranslatableComponent {
+    pub fn new<T: Into<String>>(key: T, args: Vec<serde_json::Value>) -> Self {
+        Self::new_with_style(key, args, Style::default())
     }
 
-    pub fn new_with_style<T: Into<String>>(text: T, style: Style) -> Self {
+    pub fn new_with_style<T: Into<String>>(key: T, args: Vec<serde_json::Value>, style: Style) -> Self {
         Self {
             siblings: vec![],
             style,
-            text: text.into(),
+            key: key.into(),
+            args,
         }
+    }
+
+    pub fn append_arg<T: Into<serde_json::Value>>(&mut self, arg: T) {
+        self.args.push(arg.into());
     }
 }

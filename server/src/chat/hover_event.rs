@@ -1,5 +1,5 @@
 use crate::util::ToJsonValue;
-use super::component::Component;
+use super::component::ComponentContainer;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum HoverEventAction {
@@ -17,9 +17,11 @@ impl HoverEventAction {
         }
     }
 }
+
+#[derive(Clone)]
 pub struct HoverEvent {
     pub action: HoverEventAction,
-    pub value: Box<dyn Component + Send + Sync>,
+    pub value: Box<ComponentContainer>,
 }
 
 impl ToJsonValue for HoverEvent {

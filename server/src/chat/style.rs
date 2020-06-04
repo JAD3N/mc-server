@@ -1,10 +1,9 @@
 use super::{Color, ClickEvent, HoverEvent};
 use crate::util::ToJsonValue;
 use serde_json::Value;
-use std::sync::{Arc, RwLock};
 
+#[derive(Clone)]
 pub struct Style {
-    pub parent: Option<Arc<RwLock<Style>>>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underlined: Option<bool>,
@@ -19,7 +18,6 @@ pub struct Style {
 impl Default for Style {
     fn default() -> Style {
         Style {
-            parent: None,
             bold: None,
             italic: None,
             underlined: None,
