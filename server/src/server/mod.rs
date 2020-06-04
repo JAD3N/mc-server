@@ -13,6 +13,7 @@ use crate::network::{Listener, Connection};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::path::Path;
 use tokio::sync::Mutex;
 use tokio::runtime;
 use futures::future;
@@ -94,7 +95,7 @@ pub struct ServerContainer {
 
 impl ServerContainer {
     pub fn new(registries: Registries, settings: ServerSettings) -> Self {
-        let status = ServerStatus {
+        let mut status = ServerStatus {
             description: TextComponent::new(settings.motd()).into(),
             version: ServerStatusVersion {
                 name: String::from(VERSION_NAME),
@@ -105,9 +106,24 @@ impl ServerContainer {
                 num_players: 0,
                 sample: vec![],
             },
-            // TODO: Load icon from server-icon.png or level icon.png and convert to base64
             favicon: None,
         };
+
+        // use server icon by default
+        let favicon_path = Path::new("server-icon.png");
+
+        // try to use world icon if needed
+        if !favicon_path.is_file() {
+            // TODO: Use world icon.png instead if file is not found
+        }
+
+        // final check to make sure icon is there
+        if favicon_path.is_file() {
+            // handle potential error
+            if let Err(e) = status.load_favicon(favicon_path) {
+                error!("Couldn't load server icon: {}", e);
+            }
+        }
 
         let shared = Arc::new(ServerShared {
             registries: Arc::new(registries),

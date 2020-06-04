@@ -83,7 +83,7 @@ impl ServerSettings {
             max_players: properties.get_u32_default("max-players", 20),
             max_tick_time: properties.get_i32_default("max-tick-time", 60 * 1000),
             max_world_size: properties.get_u32_default("max-world-size", 29999984),
-            motd: properties.get_default("motd", "A Minecraft Server"),
+            motd: properties.get_default("motd", "A Rusty Minecraft Server"),
             network_compression_threshold: properties.get_i32_default("network-compression-threshold", 256),
             online_mode: properties.get_bool_default("online-mode", true),
             op_permission_level: properties.get_u32_default("op-permission-level", 4),

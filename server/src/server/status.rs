@@ -1,8 +1,10 @@
-use std::fmt;
 use crate::network::protocol::{ProtocolLength, ProtocolRead, ProtocolWrite, ProtocolError};
 use crate::chat::component::ComponentContainer;
 use crate::util::ToJsonValue;
 use crate::auth::Profile;
+use std::fmt;
+use std::path::Path;
+use image::{GenericImageView, ImageFormat};
 
 #[derive(Clone)]
 pub struct ServerStatusVersion {
@@ -59,6 +61,31 @@ pub struct ServerStatus {
     pub players: ServerStatusPlayers,
     pub version: ServerStatusVersion,
     pub favicon: Option<String>,
+}
+
+impl ServerStatus {
+    pub fn load_favicon<P: AsRef<Path>>(&mut self, path: P) -> anyhow::Result<()> {
+        let img = image::open(path)?;
+
+        if img.width() != 64 {
+            anyhow::bail!("Must be 64 pixels wide");
+        }
+
+        if img.height() != 64 {
+            anyhow::bail!("Must be 64 pixels high");
+        }
+
+        let mut favicon = base64::encode({
+            let mut buf = vec![];
+            img.write_to(&mut buf, ImageFormat::Png)?;
+            buf
+        });
+
+        favicon.insert_str(0, "data:image/png;base64,");
+        self.favicon = Some(favicon);
+
+        Ok(())
+    }
 }
 
 impl ToJsonValue for ServerStatus {
