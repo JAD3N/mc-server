@@ -133,6 +133,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7bbb73db36c1246e9034e307d0fba23f9a2e251faa47ade70c1bd252220c8311"
 
 [[package]]
+name = "cfb8"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b310afa67a25a8d5189eacaf5b14418c8dc3d8bcc5755619d89cab87871260d"
+dependencies = [
+ "block-cipher-trait",
+ "stream-cipher",
+]
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1098,6 +1108,7 @@ dependencies = [
  "async-trait",
  "base64",
  "bytes",
+ "cfb8",
  "chrono",
  "colored",
  "ctrlc",
@@ -1162,6 +1173,15 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "stream-cipher"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8131256a5896cabcf5eb04f4d6dacbe1aefda854b0d9896e09cb58829ec5638c"
+dependencies = [
+ "generic-array",
+]
 
 [[package]]
 name = "syn"

@@ -11,12 +11,15 @@ use std::time::Duration;
 use flume::{Sender, Receiver};
 use futures::future::{self, Either};
 use futures::{SinkExt, StreamExt};
+use cfb8::Cfb8;
+use cfb8::stream_cipher::NewStreamCipher;
 
 pub enum WorkerRequest {
     Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
-    SetCompressionThreshold(Option<usize>),
+    EnableCompression(usize),
+    EnableEncryption([u8; 16]),
     Disconnect(ComponentContainer),
 }
 
@@ -48,7 +51,7 @@ impl Worker {
 
         let handler = None;
 
-        let codec = PacketsCodec::new();
+        let codec = PacketsCodec::default();
         let framed = Framed::new(stream, codec);
         let (tx, rx) = flume::unbounded();
 
@@ -119,8 +122,15 @@ impl Worker {
         self.framed.codec_mut().protocol = protocol;
     }
 
-    pub fn set_compression_threshold(&mut self, compression_threshold: Option<usize>) {
-        self.framed.codec_mut().compression_threshold = compression_threshold;
+    pub fn enable_compression(&mut self, threshold: usize) {
+        self.framed.codec_mut().compression_threshold = Some(threshold);
+    }
+
+    pub fn enable_encryption(&mut self, key: [u8; 16]) {
+        let codec = self.framed.codec_mut();
+
+        codec.encrypter = Some(Cfb8::new_var(&key, &key).unwrap());
+        codec.decrypter = Some(Cfb8::new_var(&key, &key).unwrap());
     }
 
     async fn handle_request(&mut self, request: WorkerRequest) -> anyhow::Result<()> {
@@ -132,7 +142,8 @@ impl Worker {
             },
             WorkerRequest::SendPacket(packet) => self.framed.send(packet).await?,
             WorkerRequest::SetProtocol(protocol) => self.set_protocol(protocol),
-            WorkerRequest::SetCompressionThreshold(compression_threshold) => self.set_compression_threshold(compression_threshold),
+            WorkerRequest::EnableCompression(threshold) => self.enable_compression(threshold),
+            WorkerRequest::EnableEncryption(key) => self.enable_encryption(key),
             WorkerRequest::Disconnect(_reason) => anyhow::bail!("i'm dead!"),
         }
 

@@ -7,6 +7,9 @@ use std::io::{Cursor, Read, Write};
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
+use cfb8::Cfb8;
+use cfb8::stream_cipher::StreamCipher;
+use aes::Aes128;
 
 const HEADER_SIZE: usize = 5 * 2; // Max size of 2 VarInts is 10 bytes
 const HEADER_EMPTY: [u8; HEADER_SIZE] = [0u8; HEADER_SIZE];
@@ -14,15 +17,21 @@ const HEADER_EMPTY: [u8; HEADER_SIZE] = [0u8; HEADER_SIZE];
 pub struct PacketsCodec {
     pub protocol: Option<Arc<Protocol>>,
     pub compression_threshold: Option<usize>,
+    pub encrypter: Option<Cfb8<Aes128>>,
+    pub decrypter: Option<Cfb8<Aes128>>,
     compression_buffer: Vec<u8>,
+    decrypter_index: usize,
 }
 
-impl PacketsCodec {
-    pub fn new() -> Self {
+impl Default for PacketsCodec {
+    fn default() -> Self {
         Self {
             protocol: None,
             compression_threshold: None,
             compression_buffer: vec![],
+            encrypter: None,
+            decrypter: None,
+            decrypter_index: 0,
         }
     }
 }
@@ -32,6 +41,12 @@ impl Decoder for PacketsCodec {
     type Error = anyhow::Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        if let Some(decrypter) = &mut self.decrypter {
+            // packet may be incomplete decrypt data as it's received
+            decrypter.decrypt(&mut src[self.decrypter_index..]);
+            self.decrypter_index = src.len();
+        }
+
         let mut cursor: Cursor<&[u8]> = Cursor::new(src);
 
         let len = match <Var<i32>>::read(&mut cursor) {
@@ -178,6 +193,10 @@ impl Encoder<PacketPayload> for PacketsCodec {
         // swap so header is at start of unsplit
         std::mem::swap(dst, &mut header);
         dst.unsplit(header);
+
+        if let Some(encrypter) = &mut self.encrypter {
+            encrypter.encrypt(dst);
+        }
 
         Ok(())
     }
