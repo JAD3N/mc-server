@@ -68,6 +68,7 @@ macro_rules! protocol {
                         packet.downcast_ref::<$sp>()
                             .unwrap()
                             .write(dst)
+                            .map_err(|err| err.into())
                     },
                 );)*
             })?
@@ -79,6 +80,7 @@ macro_rules! protocol {
                         packet.downcast_ref::<$cp>()
                             .unwrap()
                             .write(dst)
+                            .map_err(|err| err.into())
                     },
                 );)*
             })?

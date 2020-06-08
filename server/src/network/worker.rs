@@ -16,6 +16,7 @@ pub enum WorkerRequest {
     Tick,
     SendPacket(PacketPayload),
     SetProtocol(i32),
+    SetCompressionThreshold(Option<usize>),
     Disconnect(ComponentContainer),
 }
 
@@ -118,6 +119,10 @@ impl Worker {
         self.framed.codec_mut().protocol = protocol;
     }
 
+    pub fn set_compression_threshold(&mut self, compression_threshold: Option<usize>) {
+        self.framed.codec_mut().compression_threshold = compression_threshold;
+    }
+
     async fn handle_request(&mut self, request: WorkerRequest) -> anyhow::Result<()> {
         match request {
             WorkerRequest::Tick => {
@@ -127,7 +132,8 @@ impl Worker {
             },
             WorkerRequest::SendPacket(packet) => self.framed.send(packet).await?,
             WorkerRequest::SetProtocol(protocol) => self.set_protocol(protocol),
-            WorkerRequest::Disconnect(reason) => anyhow::bail!("i'm dead!"),
+            WorkerRequest::SetCompressionThreshold(compression_threshold) => self.set_compression_threshold(compression_threshold),
+            WorkerRequest::Disconnect(_reason) => anyhow::bail!("i'm dead!"),
         }
 
         Ok(())

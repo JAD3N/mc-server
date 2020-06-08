@@ -6,7 +6,7 @@ use std::io::Cursor;
 use bytes::BytesMut;
 
 type PacketReadInit = fn(&mut Cursor<&[u8]>) -> Result<Box<dyn Packet>, ProtocolError>;
-type PacketWriteInit = fn(&Box<dyn Packet>, &mut BytesMut) -> Result<(), ProtocolError>;
+type PacketWriteInit = fn(&Box<dyn Packet>, &mut BytesMut) -> anyhow::Result<()>;
 
 pub struct PacketSet {
     id_read_map: HashMap<usize, PacketReadInit>,
@@ -38,18 +38,10 @@ impl PacketSet {
         }
     }
 
-    pub fn write_packet(&self, payload: &PacketPayload, dst: &mut BytesMut) -> Option<()> {
+    pub fn write_packet(&self, payload: &PacketPayload, dst: &mut BytesMut) -> anyhow::Result<()> {
         match self.id_write_map.get(&payload.0) {
-            Some(packet_init) => {
-                match packet_init(&payload.1, dst) {
-                    Ok(packet) => Some(packet),
-                    Err(err) => {
-                        error!("Error reading packet: {}", err);
-                        None
-                    }
-                }
-            },
-            None => None,
+            Some(packet_init) => packet_init(&payload.1, dst),
+            None => Err(anyhow::anyhow!("cannot write unknown packet")),
         }
     }
 
